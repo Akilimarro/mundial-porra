@@ -18,6 +18,11 @@ type Match = {
   }
 }
 
+type User = {
+  id: number
+  username: string
+}
+
 const normalize = (str: string) =>
   str
     .toLowerCase()
@@ -81,15 +86,31 @@ export default function Home() {
 
   const [matches, setMatches] = useState<Match[]>([])
   const [phaseName, setPhaseName] = useState("")
+  const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
-    const user = localStorage.getItem("user")
-    if (!user) router.push("/login")
+    const stored = localStorage.getItem("user")
+
+    if (!stored) {
+      router.push("/login")
+      return
+    }
+
+    try {
+      setUser(JSON.parse(stored))
+    } catch {
+      router.push("/login")
+    }
   }, [])
 
   useEffect(() => {
     loadData()
   }, [])
+
+  const logout = () => {
+    localStorage.removeItem("user")
+    router.replace("/login")
+  }
 
   const loadData = async () => {
     const { data } = await supabase
@@ -143,20 +164,29 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
+      {/* HEADER */}
       <div style={styles.header}>
         <h1>🏆 Mundial Porra</h1>
+
         <p style={{ opacity: 0.7 }}>
           {phaseName ? `📅 ${phaseName}` : "Cargando fase..."}
         </p>
+
+        {user && (
+          <div style={styles.userBar}>
+            👤 {user.username}
+            <button onClick={logout} style={styles.logout}>
+              Cerrar sesión
+            </button>
+          </div>
+        )}
       </div>
 
+      {/* MATCHES */}
       <div style={styles.container}>
         {matches.map((m) => (
           <div key={m.id} style={styles.card}>
-            {/* 🕒 FECHA Y HORA */}
-            <div style={styles.date}>
-              🕒 {formatDate(m.match_date)}
-            </div>
+            <div style={styles.date}>🕒 {formatDate(m.match_date)}</div>
 
             <div style={styles.match}>
               <div style={styles.team}>
@@ -191,6 +221,23 @@ const styles: Record<string, React.CSSProperties> = {
   header: {
     textAlign: "center",
     marginBottom: 20
+  },
+  userBar: {
+    marginTop: 10,
+    display: "flex",
+    justifyContent: "center",
+    gap: 12,
+    alignItems: "center",
+    fontSize: 14,
+    opacity: 0.9
+  },
+  logout: {
+    background: "#ff4d4d",
+    border: "none",
+    padding: "4px 10px",
+    borderRadius: 6,
+    color: "white",
+    cursor: "pointer"
   },
   container: {
     maxWidth: 700,
