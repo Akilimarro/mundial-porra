@@ -19,7 +19,7 @@ type Match = {
 }
 
 /**
- * 🧠 Normalizador (quita acentos y estandariza)
+ * 🧠 Normalizador de nombres
  */
 const normalize = (str: string) =>
   str
@@ -29,11 +29,11 @@ const normalize = (str: string) =>
     .trim()
 
 /**
- * 🏳️ MAPA COMPLETO DE PAÍSES
+ * 🏳️ MAPA DE PAÍSES (CLAVES SEGURAS)
  */
 const countryMap: Record<string, string> = {
   alemania: "DE",
-  arabia saudita: "SA",
+  "arabia saudita": "SA",
   argelia: "DZ",
   argentina: "AR",
   australia: "AU",
@@ -53,7 +53,7 @@ const countryMap: Record<string, string> = {
   egipto: "EG",
   escocia: "GB-SCT",
   espana: "ES",
-  estados unidos: "US",
+  "estados unidos": "US",
   francia: "FR",
   ghana: "GH",
   haiti: "HT",
@@ -84,6 +84,7 @@ const countryMap: Record<string, string> = {
 
 export default function Home() {
   const router = useRouter()
+
   const [matches, setMatches] = useState<Match[]>([])
   const [phaseName, setPhaseName] = useState("")
 
