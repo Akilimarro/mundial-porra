@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
+import ReactCountryFlag from "react-country-flag"
 
 type Match = {
   id: number
@@ -10,6 +11,30 @@ type Match = {
   match_date: string
   goals_home: number | null
   goals_away: number | null
+}
+
+const countryMap: Record<string, string> = {
+  España: "ES",
+  Spain: "ES",
+  Francia: "FR",
+  France: "FR",
+  Alemania: "DE",
+  Germany: "DE",
+  Brasil: "BR",
+  Brazil: "BR",
+  Argentina: "AR",
+  Mexico: "MX",
+  México: "MX",
+  "South Africa": "ZA",
+  Sudafrica: "ZA",
+  "Sudáfrica": "ZA",
+  Inglaterra: "GB",
+  England: "GB",
+  Italia: "IT",
+  Italy: "IT",
+  Portugal: "PT",
+  Netherlands: "NL",
+  "Países Bajos": "NL"
 }
 
 export default function Home() {
@@ -28,27 +53,21 @@ export default function Home() {
     setMatches(data || [])
   }
 
-  const flag = (team: string) => {
-    const map: Record<string, string> = {
-      "España": "🇪🇸",
-      "Spain": "🇪🇸",
-      "Francia": "🇫🇷",
-      "France": "🇫🇷",
-      "Alemania": "🇩🇪",
-      "Germany": "🇩🇪",
-      "Brasil": "🇧🇷",
-      "Brazil": "🇧🇷",
-      "Argentina": "🇦🇷",
-      "Inglaterra": "🏴",
-      "England": "🏴",
-      "Italia": "🇮🇹",
-      "Italy": "🇮🇹",
-      "Portugal": "🇵🇹",
-      "Netherlands": "🇳🇱",
-      "Países Bajos": "🇳🇱"
-    }
+  const Flag = ({ team }: { team: string }) => {
+    const code = countryMap[team]
 
-    return map[team] || "⚽"
+    if (!code) return <span style={{ fontSize: 18 }}>⚽</span>
+
+    return (
+      <ReactCountryFlag
+        countryCode={code}
+        svg
+        style={{
+          width: "1.6em",
+          height: "1.6em",
+        }}
+      />
+    )
   }
 
   return (
@@ -68,18 +87,21 @@ export default function Home() {
             </div>
 
             <div style={styles.match}>
-              <div style={styles.team}>
-                <span style={styles.flag}>{flag(m.team_home)}</span>
+              {/* HOME */}
+              <div style={styles.teamLeft}>
+                <Flag team={m.team_home} />
                 <span>{m.team_home}</span>
               </div>
 
+              {/* SCORE */}
               <div style={styles.score}>
                 {m.goals_home ?? "-"} : {m.goals_away ?? "-"}
               </div>
 
-              <div style={styles.team}>
+              {/* AWAY */}
+              <div style={styles.teamRight}>
                 <span>{m.team_away}</span>
-                <span style={styles.flag}>{flag(m.team_away)}</span>
+                <Flag team={m.team_away} />
               </div>
             </div>
           </div>
@@ -104,7 +126,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   title: {
-    fontSize: 36,
+    fontSize: 38,
     margin: 0
   },
 
@@ -113,7 +135,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
 
   container: {
-    maxWidth: 700,
+    maxWidth: 720,
     margin: "0 auto",
     display: "flex",
     flexDirection: "column",
@@ -123,7 +145,7 @@ const styles: Record<string, React.CSSProperties> = {
   card: {
     background: "rgba(255,255,255,0.05)",
     border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 16,
     backdropFilter: "blur(10px)"
   },
@@ -136,24 +158,31 @@ const styles: Record<string, React.CSSProperties> = {
 
   match: {
     display: "grid",
-    gridTemplateColumns: "1fr auto 1fr",
-    alignItems: "center",
-    gap: 10
+    gridTemplateColumns: "1fr 90px 1fr",
+    alignItems: "center"
   },
 
-  team: {
+  teamLeft: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "flex-start",
+    gap: 10,
     fontSize: 16
   },
 
-  flag: {
-    fontSize: 20
+  teamRight: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 10,
+    fontSize: 16,
+    textAlign: "right"
   },
 
   score: {
-    fontSize: 22,
-    fontWeight: "bold"
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    minWidth: 90
   }
 }
