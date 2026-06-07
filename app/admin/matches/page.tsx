@@ -3,80 +3,226 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 
-export default function AdminConnectionTest() {
-  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
-  const [url, setUrl] = useState<string | null>(null)
-  const [key, setKey] = useState<string | null>(null)
-  const [error, setError] = useState<any>(null)
+type Round = {
+  id: string
+  name: string
+}
 
+type Match = {
+  id: string
+  team_home: string
+  team_away: string
+  match_date: string
+  lock_date: string
+  round_id: string
+  goals_home: number | null
+  goals_away: number | null
+}
+
+export default function MatchesAdmin() {
+  const [matches, setMatches] = useState<Match[]>([])
+  const [rounds, setRounds] = useState<Round[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const [form, setForm] = useState({
+    team_home: "",
+    team_away: "",
+    match_date: "",
+    round_id: ""
+  })
+
+  // -----------------------------
+  // LOAD DATA
+  // -----------------------------
   useEffect(() => {
-    const runTest = async () => {
-      setUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || null)
-      setKey(
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-          ? "✔ Key presente"
-          : null
-      )
-
-      try {
-        const { error } = await supabase.from("rounds").select("id").limit(1)
-
-        if (error) {
-          setError(error)
-          setStatus("error")
-        } else {
-          setStatus("ok")
-        }
-      } catch (e) {
-        setError(e)
-        setStatus("error")
-      }
-    }
-
-    runTest()
+    loadData()
   }, [])
 
-  const getIcon = () => {
-    if (status === "loading") return "⏳"
-    if (status === "ok") return "🟢"
-    return "🔴"
+  const loadData = async () => {
+    const [{ data: m }, { data: r }] = await Promise.all([
+      supabase
+        .from("matches")
+        .select("*")
+        .order("match_date", { ascending: true }),
+
+      supabase
+        .from("rounds")
+        .select("*")
+        .order("order_number", { ascending: true })
+    ])
+
+    setMatches(m || [])
+    setRounds(r || [])
   }
 
-  const getText = () => {
-    if (status === "loading") return "Probando conexión..."
-    if (status === "ok") return "Conexión OK con Supabase"
-    return "Error de conexión"
+  // -----------------------------
+  // CREATE MATCH
+  // -----------------------------
+  const createMatch = async () => {
+    if (!form.team_home || !form.team_away || !form.match_date || !form.round_id) {
+      alert("Rellena todos los campos")
+      return
+    }
+
+    setLoading(true)
+
+    // lock = día anterior 23:59:59
+    const lockDate = new Date(form.match_date)
+    lockDate.setDate(lockDate.getDate() - 1)
+    lockDate.setHours(23, 59, 59, 999)
+
+    const { error } = await supabase.from("matches").insert([
+      {
+        team_home: form.team_home,
+        team_away: form.team_away,
+        match_date: form.match_date,
+        lock_date: lockDate.toISOString(),
+        round_id: form.round_id
+      }
+    ])
+
+    setLoading(false)
+
+    if (error) {
+      alert("Error creando partido")
+      console.error(error)
+      return
+    }
+
+    setForm({
+      team_home: "",
+      team_away: "",
+      match_date: "",
+      round_id: ""
+    })
+
+    loadData()
   }
 
+  // -----------------------------
+  // UPDATE RESULT
+  // -----------------------------
+  const updateResult = async (
+    id: string,
+    home: number,
+    away: number
+  ) => {
+    const { error } = await supabase
+      .from("matches")
+      .update({
+        goals_home: home,
+        goals_away: away
+      })
+      .eq("id", id)
+
+    if (error) {
+      console.error(error)
+      alert("Error actualizando resultado")
+      return
+    }
+
+    loadData()
+  }
+
+  // -----------------------------
+  // UI
+  // -----------------------------
   return (
-    <div style={{ padding: 30, fontFamily: "sans-serif" }}>
-      <h1>🧪 Test de conexión Supabase</h1>
+    <div style={{ padding: 24 }}>
+      <h1>⚽ Admin de Partidos</h1>
 
-      <div style={{ fontSize: 22, marginTop: 20 }}>
-        {getIcon()} {getText()}
+      {/* FORM */}
+      <div style={{
+        padding: 16,
+        border: "1px solid #ddd",
+        marginBottom: 24
+      }}>
+        <h3>Crear partido</h3>
+
+        <input
+          placeholder="Equipo local"
+          value={form.team_home}
+          onChange={(e) =>
+            setForm({ ...form, team_home: e.target.value })
+          }
+        />
+
+        <input
+          placeholder="Equipo visitante"
+          value={form.team_away}
+          onChange={(e) =>
+            setForm({ ...form, team_away: e.target.value })
+          }
+        />
+
+        <input
+          type="datetime-local"
+          value={form.match_date}
+          onChange={(e) =>
+            setForm({ ...form, match_date: e.target.value })
+          }
+        />
+
+        {/* ROUNDS SELECT */}
+        <select
+          value={form.round_id}
+          onChange={(e) =>
+            setForm({ ...form, round_id: e.target.value })
+          }
+        >
+          <option value="">Selecciona ronda</option>
+
+          {rounds.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+
+        <button onClick={createMatch} disabled={loading}>
+          {loading ? "Creando..." : "Crear partido"}
+        </button>
       </div>
 
-      <hr style={{ margin: "20px 0" }} />
+      {/* LIST */}
+      <h3>Partidos</h3>
 
-      <h3>🔧 Variables de entorno</h3>
+      {matches.length === 0 && <p>No hay partidos aún</p>}
 
-      <p>
-        <strong>URL:</strong>{" "}
-        {url ? url : "❌ No encontrada"}
-      </p>
+      {matches.map((m) => (
+        <div key={m.id} style={{
+          padding: 10,
+          borderBottom: "1px solid #eee"
+        }}>
+          <strong>
+            {m.team_home} vs {m.team_away}
+          </strong>
 
-      <p>
-        <strong>ANON KEY:</strong>{" "}
-        {key ? key : "❌ No encontrada"}
-      </p>
+          <div style={{ marginTop: 6 }}>
+            <input
+              type="number"
+              placeholder="Local"
+              defaultValue={m.goals_home ?? ""}
+              onChange={(e) => (m._home = Number(e.target.value))}
+            />
 
-      <hr style={{ margin: "20px 0" }} />
+            <input
+              type="number"
+              placeholder="Visitante"
+              defaultValue={m.goals_away ?? ""}
+              onChange={(e) => (m._away = Number(e.target.value))}
+            />
 
-      <h3>🐞 Error (si existe)</h3>
-
-      <pre style={{ color: "red" }}>
-        {error ? JSON.stringify(error, null, 2) : "Sin errores"}
-      </pre>
+            <button
+              onClick={() =>
+                updateResult(m.id, m._home, m._away)
+              }
+            >
+              Guardar resultado
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
