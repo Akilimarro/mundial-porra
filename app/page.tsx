@@ -30,6 +30,9 @@ type User = {
 const normalize = (str: string) =>
   str.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim()
 
+/**
+ * ⚠️ IMPORTANTE: claves con espacios VAN ENTRE COMILLAS
+ */
 const countryMap: Record<string, string> = {
   espana: "ES",
   argentina: "AR",
@@ -40,10 +43,10 @@ const countryMap: Record<string, string> = {
   inglaterra: "GB",
   portugal: "PT",
   italia: "IT",
-  estados unidos: "US",
+  "estados unidos": "US",
   marruecos: "MA",
   japon: "JP",
-  corea del sur: "KR"
+  "corea del sur": "KR"
 }
 
 export default function Home() {
@@ -195,7 +198,8 @@ const styles: Record<string, React.CSSProperties> = {
     border: "none",
     padding: "4px 10px",
     borderRadius: 6,
-    color: "white"
+    color: "white",
+    cursor: "pointer"
   },
   mainButton: {
     marginTop: 10,
