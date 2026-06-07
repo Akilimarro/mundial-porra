@@ -18,25 +18,68 @@ type Match = {
   }
 }
 
+/**
+ * 🧠 Normalizador (quita acentos y estandariza)
+ */
+const normalize = (str: string) =>
+  str
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .trim()
+
+/**
+ * 🏳️ MAPA COMPLETO DE PAÍSES
+ */
 const countryMap: Record<string, string> = {
-  España: "ES",
-  France: "FR",
-  Francia: "FR",
-  Germany: "DE",
-  Alemania: "DE",
-  Brazil: "BR",
-  Brasil: "BR",
-  Mexico: "MX",
-  México: "MX",
-  "South Africa": "ZA",
-  Sudafrica: "ZA",
-  Argentina: "AR",
-  England: "GB",
-  Inglaterra: "GB",
-  Italy: "IT",
-  Italia: "IT",
-  Portugal: "PT",
-  Netherlands: "NL"
+  alemania: "DE",
+  arabia saudita: "SA",
+  argelia: "DZ",
+  argentina: "AR",
+  australia: "AU",
+  austria: "AT",
+  belgica: "BE",
+  "bosnia y herzegovina": "BA",
+  brasil: "BR",
+  "cabo verde": "CV",
+  canada: "CA",
+  catar: "QA",
+  colombia: "CO",
+  "corea del sur": "KR",
+  "costa de marfil": "CI",
+  croacia: "HR",
+  curazao: "CW",
+  ecuador: "EC",
+  egipto: "EG",
+  escocia: "GB-SCT",
+  espana: "ES",
+  estados unidos: "US",
+  francia: "FR",
+  ghana: "GH",
+  haiti: "HT",
+  inglaterra: "GB-ENG",
+  irak: "IQ",
+  iran: "IR",
+  japon: "JP",
+  jordania: "JO",
+  marruecos: "MA",
+  mexico: "MX",
+  noruega: "NO",
+  "nueva zelanda": "NZ",
+  "paises bajos": "NL",
+  panama: "PA",
+  paraguay: "PY",
+  portugal: "PT",
+  "republica checa": "CZ",
+  "republica democratica del congo": "CD",
+  senegal: "SN",
+  sudafrica: "ZA",
+  suecia: "SE",
+  suiza: "CH",
+  tunez: "TN",
+  turquia: "TR",
+  uruguay: "UY",
+  uzbekistan: "UZ"
 }
 
 export default function Home() {
@@ -63,7 +106,6 @@ export default function Home() {
 
     setMatches(data)
 
-    // 🔥 calcular fase actual (por fecha más reciente futura)
     const now = new Date()
 
     const current = data.find((m) => new Date(m.match_date) >= now)
@@ -74,15 +116,22 @@ export default function Home() {
   }
 
   const Flag = ({ team }: { team: string }) => {
-    const code = countryMap[team]
+    const key = normalize(team)
+    const code = countryMap[key]
 
-    if (!code) return <span>⚽</span>
+    if (!code) {
+      return <span style={{ fontSize: 18 }}>⚽</span>
+    }
 
     return (
       <ReactCountryFlag
         countryCode={code}
         svg
-        style={{ width: 22, height: 22 }}
+        style={{
+          width: 22,
+          height: 22,
+          display: "inline-block"
+        }}
       />
     )
   }
@@ -102,7 +151,7 @@ export default function Home() {
             <div style={styles.match}>
               <div style={styles.team}>
                 <Flag team={m.team_home} />
-                {m.team_home}
+                <span>{m.team_home}</span>
               </div>
 
               <div style={styles.score}>
@@ -110,7 +159,7 @@ export default function Home() {
               </div>
 
               <div style={styles.teamRight}>
-                {m.team_away}
+                <span>{m.team_away}</span>
                 <Flag team={m.team_away} />
               </div>
             </div>
