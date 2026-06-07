@@ -3,85 +3,80 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 
-export default function MatchesAdminDebug() {
-  const [rounds, setRounds] = useState<any[]>([])
-  const [raw, setRaw] = useState<any>(null)
+export default function AdminConnectionTest() {
+  const [status, setStatus] = useState<"loading" | "ok" | "error">("loading")
+  const [url, setUrl] = useState<string | null>(null)
+  const [key, setKey] = useState<string | null>(null)
   const [error, setError] = useState<any>(null)
 
   useEffect(() => {
-    const test = async () => {
-      console.log("🚀 TEST START")
+    const runTest = async () => {
+      setUrl(process.env.NEXT_PUBLIC_SUPABASE_URL || null)
+      setKey(
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          ? "✔ Key presente"
+          : null
+      )
 
-      const res = await supabase.from("rounds").select("*")
+      try {
+        const { error } = await supabase.from("rounds").select("id").limit(1)
 
-      console.log("FULL RESPONSE:", res)
-
-      setRaw(res)
-
-      if (res.error) {
-        console.log("❌ ERROR:", res.error)
-        setError(res.error)
-        return
+        if (error) {
+          setError(error)
+          setStatus("error")
+        } else {
+          setStatus("ok")
+        }
+      } catch (e) {
+        setError(e)
+        setStatus("error")
       }
-
-      console.log("✅ DATA:", res.data)
-
-      setRounds(res.data || [])
     }
 
-    test()
+    runTest()
   }, [])
 
+  const getIcon = () => {
+    if (status === "loading") return "⏳"
+    if (status === "ok") return "🟢"
+    return "🔴"
+  }
+
+  const getText = () => {
+    if (status === "loading") return "Probando conexión..."
+    if (status === "ok") return "Conexión OK con Supabase"
+    return "Error de conexión"
+  }
+
   return (
-    <div style={{ padding: 20 }}>
-      <h1>🧪 DEBUG SUPABASE ROUNDS</h1>
+    <div style={{ padding: 30, fontFamily: "sans-serif" }}>
+      <h1>🧪 Test de conexión Supabase</h1>
 
-      {/* ESTADO CONEXIÓN */}
-      <h2>Estado conexión</h2>
+      <div style={{ fontSize: 22, marginTop: 20 }}>
+        {getIcon()} {getText()}
+      </div>
 
-      {error && (
-        <div style={{ color: "red" }}>
-          ❌ ERROR: {JSON.stringify(error)}
-        </div>
-      )}
+      <hr style={{ margin: "20px 0" }} />
 
-      {!error && raw && (
-        <div style={{ color: "green" }}>
-          ✅ Conexión OK
-        </div>
-      )}
+      <h3>🔧 Variables de entorno</h3>
 
-      {/* RAW RESPONSE */}
-      <h2>RAW RESPONSE</h2>
-      <pre style={{ background: "#eee", padding: 10 }}>
-        {JSON.stringify(raw, null, 2)}
+      <p>
+        <strong>URL:</strong>{" "}
+        {url ? url : "❌ No encontrada"}
+      </p>
+
+      <p>
+        <strong>ANON KEY:</strong>{" "}
+        {key ? key : "❌ No encontrada"}
+      </p>
+
+      <hr style={{ margin: "20px 0" }} />
+
+      <h3>🐞 Error (si existe)</h3>
+
+      <pre style={{ color: "red" }}>
+        {error ? JSON.stringify(error, null, 2) : "Sin errores"}
       </pre>
-
-      {/* ROUNDS */}
-      <h2>ROUNDS PARSED</h2>
-
-      {rounds.length === 0 ? (
-        <p>⚠️ No llegan rondas</p>
-      ) : (
-        rounds.map((r) => (
-          <div key={r.id} style={{ marginBottom: 8 }}>
-            <strong>{r.name}</strong> — {r.id}
-          </div>
-        ))
-      )}
-
-      {/* SELECT TEST */}
-      <h2>Select test</h2>
-
-      <select>
-        <option>Selecciona ronda</option>
-
-        {rounds.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.name}
-          </option>
-        ))}
-      </select>
     </div>
   )
 }
