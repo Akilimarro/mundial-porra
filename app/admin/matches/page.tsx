@@ -31,6 +31,11 @@ export default function MatchesAdmin() {
     round_id: ""
   })
 
+  // 👇 estado correcto para resultados (SIN mutar objetos)
+  const [results, setResults] = useState<
+    Record<string, { home?: number; away?: number }>
+  >({})
+
   // -----------------------------
   // LOAD DATA
   // -----------------------------
@@ -59,14 +64,18 @@ export default function MatchesAdmin() {
   // CREATE MATCH
   // -----------------------------
   const createMatch = async () => {
-    if (!form.team_home || !form.team_away || !form.match_date || !form.round_id) {
+    if (
+      !form.team_home ||
+      !form.team_away ||
+      !form.match_date ||
+      !form.round_id
+    ) {
       alert("Rellena todos los campos")
       return
     }
 
     setLoading(true)
 
-    // lock = día anterior 23:59:59
     const lockDate = new Date(form.match_date)
     lockDate.setDate(lockDate.getDate() - 1)
     lockDate.setHours(23, 59, 59, 999)
@@ -84,8 +93,8 @@ export default function MatchesAdmin() {
     setLoading(false)
 
     if (error) {
-      alert("Error creando partido")
       console.error(error)
+      alert("Error creando partido")
       return
     }
 
@@ -163,7 +172,6 @@ export default function MatchesAdmin() {
           }
         />
 
-        {/* ROUNDS SELECT */}
         <select
           value={form.round_id}
           onChange={(e) =>
@@ -190,10 +198,13 @@ export default function MatchesAdmin() {
       {matches.length === 0 && <p>No hay partidos aún</p>}
 
       {matches.map((m) => (
-        <div key={m.id} style={{
-          padding: 10,
-          borderBottom: "1px solid #eee"
-        }}>
+        <div
+          key={m.id}
+          style={{
+            padding: 10,
+            borderBottom: "1px solid #eee"
+          }}
+        >
           <strong>
             {m.team_home} vs {m.team_away}
           </strong>
@@ -202,20 +213,40 @@ export default function MatchesAdmin() {
             <input
               type="number"
               placeholder="Local"
-              defaultValue={m.goals_home ?? ""}
-              onChange={(e) => (m._home = Number(e.target.value))}
+              value={results[m.id]?.home ?? ""}
+              onChange={(e) =>
+                setResults({
+                  ...results,
+                  [m.id]: {
+                    ...results[m.id],
+                    home: Number(e.target.value)
+                  }
+                })
+              }
             />
 
             <input
               type="number"
               placeholder="Visitante"
-              defaultValue={m.goals_away ?? ""}
-              onChange={(e) => (m._away = Number(e.target.value))}
+              value={results[m.id]?.away ?? ""}
+              onChange={(e) =>
+                setResults({
+                  ...results,
+                  [m.id]: {
+                    ...results[m.id],
+                    away: Number(e.target.value)
+                  }
+                })
+              }
             />
 
             <button
               onClick={() =>
-                updateResult(m.id, m._home, m._away)
+                updateResult(
+                  m.id,
+                  results[m.id]?.home ?? 0,
+                  results[m.id]?.away ?? 0
+                )
               }
             >
               Guardar resultado
