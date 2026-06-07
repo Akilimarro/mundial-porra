@@ -18,9 +18,6 @@ type Match = {
   }
 }
 
-/**
- * 🧠 Normalizador de nombres
- */
 const normalize = (str: string) =>
   str
     .toLowerCase()
@@ -28,9 +25,6 @@ const normalize = (str: string) =>
     .replace(/\p{Diacritic}/gu, "")
     .trim()
 
-/**
- * 🏳️ MAPA DE PAÍSES (CLAVES SEGURAS)
- */
 const countryMap: Record<string, string> = {
   alemania: "DE",
   "arabia saudita": "SA",
@@ -108,7 +102,6 @@ export default function Home() {
     setMatches(data)
 
     const now = new Date()
-
     const current = data.find((m) => new Date(m.match_date) >= now)
 
     if (current?.rounds?.name) {
@@ -137,6 +130,17 @@ export default function Home() {
     )
   }
 
+  const formatDate = (date: string) => {
+    const d = new Date(date)
+    return d.toLocaleString("es-ES", {
+      weekday: "short",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    })
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.header}>
@@ -149,6 +153,11 @@ export default function Home() {
       <div style={styles.container}>
         {matches.map((m) => (
           <div key={m.id} style={styles.card}>
+            {/* 🕒 FECHA Y HORA */}
+            <div style={styles.date}>
+              🕒 {formatDate(m.match_date)}
+            </div>
+
             <div style={styles.match}>
               <div style={styles.team}>
                 <Flag team={m.team_home} />
@@ -194,6 +203,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(255,255,255,0.05)",
     padding: 12,
     borderRadius: 10
+  },
+  date: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginBottom: 8
   },
   match: {
     display: "grid",
