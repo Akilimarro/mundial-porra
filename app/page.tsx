@@ -1,11 +1,12 @@
 "use client"
 
+import { useEffect } from "react"
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseKey)
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 export default function Home() {
   useEffect(() => {
@@ -14,16 +15,11 @@ export default function Home() {
         .from("matches")
         .select("*")
 
-      console.log("matches:", data)
-      console.log("error:", error)
+      console.log(data, error)
     }
 
     fetchMatches()
   }, [])
 
-  return (
-    <div>
-      <h1>⚽ Porra Mundial</h1>
-    </div>
-  )
+  return <h1>Porra Mundial ⚽</h1>
 }
