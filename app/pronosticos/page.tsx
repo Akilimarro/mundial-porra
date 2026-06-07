@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
+import ReactCountryFlag from "react-country-flag"
 
 type Match = {
   id: number
@@ -10,12 +11,6 @@ type Match = {
   team_away: string
   match_date: string
   round_id: number
-}
-
-type Prediction = {
-  match_id: number
-  predicted_home: number
-  predicted_away: number
 }
 
 type User = {
@@ -26,7 +21,7 @@ export default function PronosticosPage() {
   const router = useRouter()
 
   const [matches, setMatches] = useState<Match[]>([])
-  const [predictions, setPredictions] = useState<Record<number, Prediction>>({})
+  const [predictions, setPredictions] = useState<any>({})
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -40,58 +35,29 @@ export default function PronosticosPage() {
   }, [])
 
   const loadMatches = async (userId: number) => {
-    // 🔥 obtener próxima ronda (no empezada)
     const now = new Date()
 
-    const { data: matchesData } = await supabase
+    const { data } = await supabase
       .from("matches")
       .select("*")
-      .order("match_date", { ascending: true })
+      .order("match_date")
 
-    if (!matchesData) return
+    if (!data) return
 
-    const nextMatch = matchesData.find(
-      (m) => new Date(m.match_date) > now
-    )
+    const next = data.find((m) => new Date(m.match_date) > now)
+    if (!next) return
 
-    if (!nextMatch) return
-
-    const roundId = nextMatch.round_id
-
-    const roundMatches = matchesData.filter(
-      (m) => m.round_id === roundId
-    )
+    const roundMatches = data.filter((m) => m.round_id === next.round_id)
 
     setMatches(roundMatches)
-
-    // 🔥 cargar predicciones existentes
-    const { data: predData } = await supabase
-      .from("predictions")
-      .select("*")
-      .eq("user_id", userId)
-
-    const map: Record<number, Prediction> = {}
-
-    predData?.forEach((p) => {
-      map[p.match_id] = p
-    })
-
-    setPredictions(map)
   }
 
-  const updatePrediction = (
-    matchId: number,
-    field: "home" | "away",
-    value: number
-  ) => {
-    setPredictions((prev) => ({
+  const update = (id: number, field: string, value: number) => {
+    setPredictions((prev: any) => ({
       ...prev,
-      [matchId]: {
-        match_id: matchId,
-        predicted_home:
-          field === "home" ? value : prev[matchId]?.predicted_home ?? 0,
-        predicted_away:
-          field === "away" ? value : prev[matchId]?.predicted_away ?? 0
+      [id]: {
+        ...prev[id],
+        [field]: value
       }
     }))
   }
@@ -99,9 +65,11 @@ export default function PronosticosPage() {
   const save = async () => {
     if (!user) return
 
-    for (const p of Object.values(predictions)) {
+    for (const [matchId, p] of Object.entries(predictions)) {
       await supabase.from("predictions").upsert({
-        ...p,
+        match_id: Number(matchId),
+        predicted_home: p.predicted_home ?? 0,
+        predicted_away: p.predicted_away ?? 0,
         user_id: user.id
       })
     }
@@ -113,37 +81,29 @@ export default function PronosticosPage() {
     <div style={{ padding: 20, background: "#000", color: "#fff" }}>
       <h1>✍️ Pronósticos</h1>
 
-      {matches.map((m) => {
-        const p = predictions[m.id]
-
-        return (
-          <div key={m.id} style={{ marginBottom: 10 }}>
-            <div>
-              {m.team_home} vs {m.team_away}
-            </div>
-
-            <input
-              type="number"
-              placeholder="0"
-              value={p?.predicted_home ?? ""}
-              onChange={(e) =>
-                updatePrediction(m.id, "home", Number(e.target.value))
-              }
-            />
-
-            <input
-              type="number"
-              placeholder="0"
-              value={p?.predicted_away ?? ""}
-              onChange={(e) =>
-                updatePrediction(m.id, "away", Number(e.target.value))
-              }
-            />
+      {matches.map((m) => (
+        <div key={m.id} style={{ marginBottom: 15 }}>
+          <div>
+            {m.team_home} vs {m.team_away}
           </div>
-        )
-      })}
 
-      <button onClick={save}>💾 Guardar</button>
+          <input
+            type="number"
+            onChange={(e) =>
+              update(m.id, "predicted_home", Number(e.target.value))
+            }
+          />
+
+          <input
+            type="number"
+            onChange={(e) =>
+              update(m.id, "predicted_away", Number(e.target.value))
+            }
+          />
+        </div>
+      ))}
+
+      <button onClick={save}>Guardar</button>
     </div>
   )
 }

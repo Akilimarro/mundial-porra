@@ -36,7 +36,14 @@ const countryMap: Record<string, string> = {
   brasil: "BR",
   mexico: "MX",
   francia: "FR",
-  alemania: "DE"
+  alemania: "DE",
+  inglaterra: "GB",
+  portugal: "PT",
+  italia: "IT",
+  estados unidos: "US",
+  marruecos: "MA",
+  japon: "JP",
+  corea del sur: "KR"
 }
 
 export default function Home() {
@@ -89,37 +96,157 @@ export default function Home() {
   const Flag = ({ team }: { team: string }) => {
     const code = countryMap[normalize(team)]
     if (!code) return <span>⚽</span>
-    return <ReactCountryFlag countryCode={code} svg style={{ width: 20 }} />
+
+    return (
+      <ReactCountryFlag
+        countryCode={code}
+        svg
+        style={{ width: 22, height: 22 }}
+      />
+    )
+  }
+
+  const formatDate = (date: string) => {
+    const d = new Date(date)
+    return d.toLocaleString("es-ES", {
+      weekday: "short",
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    })
   }
 
   return (
-    <div style={{ padding: 20, background: "#000", color: "#fff" }}>
-      <h1>🏆 Mundial Porra</h1>
+    <div style={styles.page}>
+      <div style={styles.header}>
+        <h1>🏆 Mundial Porra</h1>
 
-      {user && (
-        <div style={{ marginBottom: 10 }}>
-          👤 {user.username}
-          <button onClick={logout}>Cerrar sesión</button>
-        </div>
-      )}
-
-      {/* BOTÓN NUEVO */}
-      <button onClick={() => router.push("/pronosticos")}>
-        ✍️ Editar Pronósticos
-      </button>
-
-      {matches.map((m) => (
-        <div key={m.id} style={{ marginTop: 10 }}>
-          <div>
-            {m.team_home} vs {m.team_away}
+        {user && (
+          <div style={styles.userBar}>
+            👤 {user.username}
+            <button onClick={logout} style={styles.logout}>
+              Cerrar sesión
+            </button>
           </div>
+        )}
 
-          <div>Resultado: {m.goals_home ?? "-"} : {m.goals_away ?? "-"}</div>
+        <button
+          style={styles.mainButton}
+          onClick={() => router.push("/pronosticos")}
+        >
+          ✍️ Editar Pronósticos
+        </button>
+      </div>
 
-          {/* 🔥 PREDICCIÓN */}
-          <div>Tu predicción: {getPrediction(m.id)}</div>
-        </div>
-      ))}
+      <div style={styles.container}>
+        {matches.map((m) => (
+          <div key={m.id} style={styles.card}>
+            <div style={styles.date}>🕒 {formatDate(m.match_date)}</div>
+
+            <div style={styles.match}>
+              <div style={styles.team}>
+                <Flag team={m.team_home} />
+                {m.team_home}
+              </div>
+
+              <div style={styles.center}>
+                <div style={styles.score}>
+                  {m.goals_home ?? "-"} : {m.goals_away ?? "-"}
+                </div>
+
+                <div style={styles.prediction}>
+                  {getPrediction(m.id)}
+                </div>
+              </div>
+
+              <div style={styles.teamRight}>
+                {m.team_away}
+                <Flag team={m.team_away} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  page: {
+    minHeight: "100vh",
+    background: "#000",
+    color: "white",
+    padding: 16,
+    fontFamily: "sans-serif"
+  },
+  header: {
+    textAlign: "center",
+    marginBottom: 20
+  },
+  userBar: {
+    marginTop: 10,
+    display: "flex",
+    justifyContent: "center",
+    gap: 10
+  },
+  logout: {
+    background: "#ff4d4d",
+    border: "none",
+    padding: "4px 10px",
+    borderRadius: 6,
+    color: "white"
+  },
+  mainButton: {
+    marginTop: 10,
+    padding: "8px 12px",
+    borderRadius: 8,
+    background: "#1f6feb",
+    color: "white",
+    border: "none",
+    cursor: "pointer"
+  },
+  container: {
+    maxWidth: 700,
+    margin: "0 auto",
+    display: "flex",
+    flexDirection: "column",
+    gap: 10
+  },
+  card: {
+    background: "rgba(255,255,255,0.05)",
+    padding: 12,
+    borderRadius: 10
+  },
+  date: {
+    fontSize: 12,
+    opacity: 0.6,
+    marginBottom: 8
+  },
+  match: {
+    display: "grid",
+    gridTemplateColumns: "1fr 120px 1fr",
+    alignItems: "center"
+  },
+  team: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center"
+  },
+  teamRight: {
+    display: "flex",
+    gap: 8,
+    justifyContent: "flex-end",
+    alignItems: "center"
+  },
+  center: {
+    textAlign: "center"
+  },
+  score: {
+    fontWeight: "bold"
+  },
+  prediction: {
+    fontSize: 12,
+    opacity: 0.7
+  }
 }
