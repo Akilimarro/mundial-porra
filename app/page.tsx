@@ -59,14 +59,18 @@ export default function Home() {
     if (!code) return <span style={{ fontSize: 18 }}>⚽</span>
 
     return (
-      <ReactCountryFlag
-        countryCode={code}
-        svg
-        style={{
-          width: "1.6em",
-          height: "1.6em",
-        }}
-      />
+      <span style={{ display: "inline-flex", alignItems: "center" }}>
+        <ReactCountryFlag
+          countryCode={code}
+          svg
+          style={{
+            width: "22px",
+            height: "22px",
+            display: "block",
+            lineHeight: "22px"
+          }}
+        />
+      </span>
     )
   }
 
@@ -116,17 +120,17 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: "100vh",
     background: "radial-gradient(circle at top, #111, #000)",
     color: "white",
-    padding: 20,
+    padding: 16,
     fontFamily: "sans-serif"
   },
 
   header: {
     textAlign: "center",
-    marginBottom: 30
+    marginBottom: 24
   },
 
   title: {
-    fontSize: 38,
+    fontSize: 34,
     margin: 0
   },
 
@@ -146,7 +150,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: "rgba(255,255,255,0.05)",
     border: "1px solid rgba(255,255,255,0.1)",
     borderRadius: 14,
-    padding: 16,
+    padding: 14,
     backdropFilter: "blur(10px)"
   },
 
@@ -158,31 +162,37 @@ const styles: Record<string, React.CSSProperties> = {
 
   match: {
     display: "grid",
-    gridTemplateColumns: "1fr 90px 1fr",
-    alignItems: "center"
+    gridTemplateColumns: "1fr 80px 1fr",
+    alignItems: "center",
+    gap: 6
   },
 
   teamLeft: {
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-start",
-    gap: 10,
-    fontSize: 16
+    gap: 8,
+    fontSize: 15,
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis"
   },
 
   teamRight: {
     display: "flex",
     alignItems: "center",
     justifyContent: "flex-end",
-    gap: 10,
-    fontSize: 16,
-    textAlign: "right"
+    gap: 8,
+    fontSize: 15,
+    overflow: "hidden",
+    whiteSpace: "nowrap",
+    textOverflow: "ellipsis"
   },
 
   score: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
     textAlign: "center",
-    minWidth: 90
+    minWidth: 70
   }
 }
