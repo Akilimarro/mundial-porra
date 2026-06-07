@@ -13,9 +13,13 @@ type Match = {
   goals_home: number | null
   goals_away: number | null
   round_id: number
-  rounds?: {
-    name: string
-  }
+  rounds?: { name: string }
+}
+
+type Prediction = {
+  match_id: number
+  predicted_home: number
+  predicted_away: number
 }
 
 type User = {
@@ -24,256 +28,98 @@ type User = {
 }
 
 const normalize = (str: string) =>
-  str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
+  str.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim()
 
 const countryMap: Record<string, string> = {
-  alemania: "DE",
-  "arabia saudita": "SA",
-  argelia: "DZ",
-  argentina: "AR",
-  australia: "AU",
-  austria: "AT",
-  belgica: "BE",
-  "bosnia y herzegovina": "BA",
-  brasil: "BR",
-  "cabo verde": "CV",
-  canada: "CA",
-  catar: "QA",
-  colombia: "CO",
-  "corea del sur": "KR",
-  "costa de marfil": "CI",
-  croacia: "HR",
-  curazao: "CW",
-  ecuador: "EC",
-  egipto: "EG",
-  escocia: "GB-SCT",
   espana: "ES",
-  "estados unidos": "US",
-  francia: "FR",
-  ghana: "GH",
-  haiti: "HT",
-  inglaterra: "GB-ENG",
-  irak: "IQ",
-  iran: "IR",
-  japon: "JP",
-  jordania: "JO",
-  marruecos: "MA",
+  argentina: "AR",
+  brasil: "BR",
   mexico: "MX",
-  noruega: "NO",
-  "nueva zelanda": "NZ",
-  "paises bajos": "NL",
-  panama: "PA",
-  paraguay: "PY",
-  portugal: "PT",
-  "republica checa": "CZ",
-  "republica democratica del congo": "CD",
-  senegal: "SN",
-  sudafrica: "ZA",
-  suecia: "SE",
-  suiza: "CH",
-  tunez: "TN",
-  turquia: "TR",
-  uruguay: "UY",
-  uzbekistan: "UZ"
+  francia: "FR",
+  alemania: "DE"
 }
 
 export default function Home() {
   const router = useRouter()
 
   const [matches, setMatches] = useState<Match[]>([])
-  const [phaseName, setPhaseName] = useState("")
+  const [predictions, setPredictions] = useState<Prediction[]>([])
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem("user")
+    if (!stored) return router.push("/login")
 
-    if (!stored) {
-      router.push("/login")
-      return
-    }
+    const u = JSON.parse(stored)
+    setUser(u)
 
-    try {
-      setUser(JSON.parse(stored))
-    } catch {
-      router.push("/login")
-    }
+    loadMatches()
+    loadPredictions(u.id)
   }, [])
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  const loadMatches = async () => {
+    const { data } = await supabase
+      .from("matches")
+      .select("*, rounds(name)")
+      .order("match_date", { ascending: true })
+
+    if (data) setMatches(data)
+  }
+
+  const loadPredictions = async (userId: number) => {
+    const { data } = await supabase
+      .from("predictions")
+      .select("*")
+      .eq("user_id", userId)
+
+    if (data) setPredictions(data)
+  }
+
+  const getPrediction = (matchId: number) => {
+    const p = predictions.find((x) => x.match_id === matchId)
+    if (!p) return "- : -"
+    return `${p.predicted_home} : ${p.predicted_away}`
+  }
 
   const logout = () => {
     localStorage.removeItem("user")
     router.replace("/login")
   }
 
-  const loadData = async () => {
-    const { data } = await supabase
-      .from("matches")
-      .select("*, rounds(name)")
-      .order("match_date", { ascending: true })
-
-    if (!data) return
-
-    setMatches(data)
-
-    const now = new Date()
-    const current = data.find((m) => new Date(m.match_date) >= now)
-
-    if (current?.rounds?.name) {
-      setPhaseName(current.rounds.name)
-    }
-  }
-
   const Flag = ({ team }: { team: string }) => {
-    const key = normalize(team)
-    const code = countryMap[key]
-
-    if (!code) {
-      return <span style={{ fontSize: 18 }}>⚽</span>
-    }
-
-    return (
-      <ReactCountryFlag
-        countryCode={code}
-        svg
-        style={{
-          width: 22,
-          height: 22,
-          display: "inline-block"
-        }}
-      />
-    )
-  }
-
-  const formatDate = (date: string) => {
-    const d = new Date(date)
-    return d.toLocaleString("es-ES", {
-      weekday: "short",
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
+    const code = countryMap[normalize(team)]
+    if (!code) return <span>⚽</span>
+    return <ReactCountryFlag countryCode={code} svg style={{ width: 20 }} />
   }
 
   return (
-    <div style={styles.page}>
-      {/* HEADER */}
-      <div style={styles.header}>
-        <h1>🏆 Mundial Porra</h1>
+    <div style={{ padding: 20, background: "#000", color: "#fff" }}>
+      <h1>🏆 Mundial Porra</h1>
 
-        <p style={{ opacity: 0.7 }}>
-          {phaseName ? `📅 ${phaseName}` : "Cargando fase..."}
-        </p>
+      {user && (
+        <div style={{ marginBottom: 10 }}>
+          👤 {user.username}
+          <button onClick={logout}>Cerrar sesión</button>
+        </div>
+      )}
 
-        {user && (
-          <div style={styles.userBar}>
-            👤 {user.username}
-            <button onClick={logout} style={styles.logout}>
-              Cerrar sesión
-            </button>
+      {/* BOTÓN NUEVO */}
+      <button onClick={() => router.push("/pronosticos")}>
+        ✍️ Editar Pronósticos
+      </button>
+
+      {matches.map((m) => (
+        <div key={m.id} style={{ marginTop: 10 }}>
+          <div>
+            {m.team_home} vs {m.team_away}
           </div>
-        )}
-      </div>
 
-      {/* MATCHES */}
-      <div style={styles.container}>
-        {matches.map((m) => (
-          <div key={m.id} style={styles.card}>
-            <div style={styles.date}>🕒 {formatDate(m.match_date)}</div>
+          <div>Resultado: {m.goals_home ?? "-"} : {m.goals_away ?? "-"}</div>
 
-            <div style={styles.match}>
-              <div style={styles.team}>
-                <Flag team={m.team_home} />
-                <span>{m.team_home}</span>
-              </div>
-
-              <div style={styles.score}>
-                {m.goals_home ?? "-"} : {m.goals_away ?? "-"}
-              </div>
-
-              <div style={styles.teamRight}>
-                <span>{m.team_away}</span>
-                <Flag team={m.team_away} />
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+          {/* 🔥 PREDICCIÓN */}
+          <div>Tu predicción: {getPrediction(m.id)}</div>
+        </div>
+      ))}
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#000",
-    color: "white",
-    padding: 16,
-    fontFamily: "sans-serif"
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: 20
-  },
-  userBar: {
-    marginTop: 10,
-    display: "flex",
-    justifyContent: "center",
-    gap: 12,
-    alignItems: "center",
-    fontSize: 14,
-    opacity: 0.9
-  },
-  logout: {
-    background: "#ff4d4d",
-    border: "none",
-    padding: "4px 10px",
-    borderRadius: 6,
-    color: "white",
-    cursor: "pointer"
-  },
-  container: {
-    maxWidth: 700,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10
-  },
-  card: {
-    background: "rgba(255,255,255,0.05)",
-    padding: 12,
-    borderRadius: 10
-  },
-  date: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 8
-  },
-  match: {
-    display: "grid",
-    gridTemplateColumns: "1fr 80px 1fr",
-    alignItems: "center"
-  },
-  team: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center"
-  },
-  teamRight: {
-    display: "flex",
-    gap: 8,
-    justifyContent: "flex-end",
-    alignItems: "center"
-  },
-  score: {
-    textAlign: "center",
-    fontWeight: "bold"
-  }
 }
