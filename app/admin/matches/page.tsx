@@ -63,13 +63,9 @@ export default function MatchesAdmin() {
   // -----------------------------
   // CREATE MATCH
   // -----------------------------
+
   const createMatch = async () => {
-    if (
-      !form.team_home ||
-      !form.team_away ||
-      !form.match_date ||
-      !form.round_id
-    ) {
+    if (!form.team_home || !form.team_away || !form.match_date || !form.round_id) {
       alert("Rellena todos los campos")
       return
     }
@@ -80,23 +76,30 @@ export default function MatchesAdmin() {
     lockDate.setDate(lockDate.getDate() - 1)
     lockDate.setHours(23, 59, 59, 999)
 
-    const { error } = await supabase.from("matches").insert([
-      {
-        team_home: form.team_home,
-        team_away: form.team_away,
-        match_date: form.match_date,
-        lock_date: lockDate.toISOString(),
-        round_id: form.round_id
-      }
-    ])
+    const payload = {
+      team_home: form.team_home,
+      team_away: form.team_away,
+      match_date: form.match_date,
+      lock_date: lockDate.toISOString(),
+      round_id: form.round_id
+    }
+
+    console.log("📦 INSERT PAYLOAD:", payload)
+
+    const { data, error } = await supabase
+      .from("matches")
+      .insert([payload])
+      .select()
 
     setLoading(false)
 
     if (error) {
-      console.error(error)
-      alert("Error creando partido")
+      console.error("❌ SUPABASE ERROR FULL:", error)
+      alert(error.message) // 👈 ESTE ES EL CLAVE
       return
     }
+
+    console.log("✅ CREATED:", data)
 
     setForm({
       team_home: "",
