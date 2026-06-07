@@ -21,35 +21,12 @@ type Prediction = {
 
 type PredictionsMap = Record<number, Prediction>
 
-type User = {
-  id: number
-}
-
-const normalize = (str: string) =>
-  str.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim()
-
-const countryMap: Record<string, string> = {
-  espana: "ES",
-  argentina: "AR",
-  brasil: "BR",
-  mexico: "MX",
-  francia: "FR",
-  alemania: "DE",
-  inglaterra: "GB",
-  portugal: "PT",
-  italia: "IT",
-  "estados unidos": "US",
-  marruecos: "MA",
-  japon: "JP",
-  "corea del sur": "KR"
-}
-
 export default function PronosticosPage() {
   const router = useRouter()
 
   const [matches, setMatches] = useState<Match[]>([])
   const [predictions, setPredictions] = useState<PredictionsMap>({})
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
     const stored = localStorage.getItem("user")
@@ -74,9 +51,7 @@ export default function PronosticosPage() {
     const next = data.find((m) => new Date(m.match_date) > now)
     if (!next) return
 
-    const roundMatches = data.filter((m) => m.round_id === next.round_id)
-
-    setMatches(roundMatches)
+    setMatches(data.filter((m) => m.round_id === next.round_id))
   }
 
   const update = (id: number, field: keyof Prediction, value: number) => {
@@ -97,15 +72,9 @@ export default function PronosticosPage() {
   }
 
   const save = async () => {
-    if (!user) return
-
-    for (const [matchId, p] of Object.entries(predictions)) {
-      const pred = p as Prediction
-
+    for (const p of Object.values(predictions)) {
       await supabase.from("predictions").upsert({
-        match_id: Number(matchId),
-        predicted_home: pred.predicted_home ?? 0,
-        predicted_away: pred.predicted_away ?? 0,
+        ...p,
         user_id: user.id
       })
     }
@@ -113,102 +82,37 @@ export default function PronosticosPage() {
     alert("Guardado ✅")
   }
 
-  const Flag = ({ team }: { team: string }) => {
-    const code = countryMap[normalize(team)]
-    if (!code) return <span>⚽</span>
-
-    return (
-      <ReactCountryFlag
-        countryCode={code}
-        svg
-        style={{ width: 22, height: 22 }}
-      />
-    )
-  }
+  const Flag = ({ team }: { team: string }) => (
+    <ReactCountryFlag
+      countryCode="ES"
+      svg
+      style={{ width: 20 }}
+    />
+  )
 
   return (
-    <div style={styles.page}>
+    <div style={{ background: "#000", color: "#fff", padding: 16 }}>
       <h1>✍️ Pronósticos</h1>
 
-      <div style={styles.container}>
-        {matches.map((m) => (
-          <div key={m.id} style={styles.card}>
-            <div style={styles.match}>
-              <div style={styles.team}>
-                <Flag team={m.team_home} />
-                {m.team_home}
-              </div>
+      <button onClick={() => router.push("/")} style={{ marginBottom: 10 }}>
+        ⬅ Volver
+      </button>
 
-              <div style={styles.inputs}>
-                <input
-                  type="number"
-                  onChange={(e) =>
-                    update(m.id, "predicted_home", Number(e.target.value))
-                  }
-                />
-                <span>:</span>
-                <input
-                  type="number"
-                  onChange={(e) =>
-                    update(m.id, "predicted_away", Number(e.target.value))
-                  }
-                />
-              </div>
+      {matches.map((m) => (
+        <div key={m.id} style={{ marginBottom: 10 }}>
+          {m.team_home} vs {m.team_away}
 
-              <div style={styles.teamRight}>
-                {m.team_away}
-                <Flag team={m.team_away} />
-              </div>
-            </div>
+          <div>
+            <input onChange={(e) => update(m.id, "predicted_home", Number(e.target.value))} />
+            :
+            <input onChange={(e) => update(m.id, "predicted_away", Number(e.target.value))} />
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
 
-      <button onClick={save} style={styles.save}>
-        💾 Guardar
+      <button style={{ padding: "6px 12px" }} onClick={save}>
+        Guardar
       </button>
     </div>
   )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", background: "#000", color: "white", padding: 16 },
-  container: {
-    maxWidth: 700,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10
-  },
-  card: {
-    background: "rgba(255,255,255,0.05)",
-    padding: 12,
-    borderRadius: 10
-  },
-  match: {
-    display: "grid",
-    gridTemplateColumns: "1fr 120px 1fr",
-    alignItems: "center"
-  },
-  team: { display: "flex", gap: 8, alignItems: "center" },
-  teamRight: {
-    display: "flex",
-    gap: 8,
-    justifyContent: "flex-end",
-    alignItems: "center"
-  },
-  inputs: {
-    display: "flex",
-    justifyContent: "center",
-    gap: 6
-  },
-  save: {
-    marginTop: 20,
-    padding: 10,
-    background: "#1f6feb",
-    border: "none",
-    borderRadius: 8,
-    color: "white",
-    width: "100%"
-  }
 }

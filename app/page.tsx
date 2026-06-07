@@ -13,7 +13,6 @@ type Match = {
   goals_home: number | null
   goals_away: number | null
   round_id: number
-  rounds?: { name: string }
 }
 
 type Prediction = {
@@ -30,20 +29,56 @@ type User = {
 const normalize = (str: string) =>
   str.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim()
 
+// 🌍 MAPA COMPLETO
 const countryMap: Record<string, string> = {
-  espana: "ES",
-  argentina: "AR",
-  brasil: "BR",
-  mexico: "MX",
-  francia: "FR",
   alemania: "DE",
-  inglaterra: "GB",
-  portugal: "PT",
-  italia: "IT",
+  "arabia saudita": "SA",
+  argelia: "DZ",
+  argentina: "AR",
+  australia: "AU",
+  austria: "AT",
+  belgica: "BE",
+  "bosnia y herzegovina": "BA",
+  brasil: "BR",
+  "cabo verde": "CV",
+  canada: "CA",
+  catar: "QA",
+  colombia: "CO",
+  "corea del sur": "KR",
+  "costa de marfil": "CI",
+  croacia: "HR",
+  curazao: "CW",
+  ecuador: "EC",
+  egipto: "EG",
+  escocia: "GB-SCT",
+  espana: "ES",
   "estados unidos": "US",
-  marruecos: "MA",
+  francia: "FR",
+  ghana: "GH",
+  haiti: "HT",
+  inglaterra: "GB",
+  irak: "IQ",
+  iran: "IR",
   japon: "JP",
-  "corea del sur": "KR"
+  jordania: "JO",
+  marruecos: "MA",
+  mexico: "MX",
+  noruega: "NO",
+  "nueva zelanda": "NZ",
+  "paises bajos": "NL",
+  panama: "PA",
+  paraguay: "PY",
+  portugal: "PT",
+  "republica checa": "CZ",
+  "republica democratica del congo": "CD",
+  senegal: "SN",
+  sudafrica: "ZA",
+  suecia: "SE",
+  suiza: "CH",
+  tunez: "TN",
+  turquia: "TR",
+  uruguay: "UY",
+  uzbekistan: "UZ"
 }
 
 export default function Home() {
@@ -67,8 +102,8 @@ export default function Home() {
   const loadMatches = async () => {
     const { data } = await supabase
       .from("matches")
-      .select("*, rounds(name)")
-      .order("match_date", { ascending: true })
+      .select("*")
+      .order("match_date")
 
     if (data) setMatches(data)
   }
@@ -84,8 +119,8 @@ export default function Home() {
 
   const getPrediction = (matchId: number) => {
     const p = predictions.find((x) => x.match_id === matchId)
-    if (!p) return "- : -"
-    return `${p.predicted_home} : ${p.predicted_away}`
+    if (!p) return "(- : -)"
+    return `(${p.predicted_home} : ${p.predicted_away})`
   }
 
   const logout = () => {
@@ -106,16 +141,13 @@ export default function Home() {
     )
   }
 
-  const formatDate = (date: string) => {
-    const d = new Date(date)
-    return d.toLocaleString("es-ES", {
-      weekday: "short",
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleString("es-ES", {
       day: "2-digit",
       month: "2-digit",
       hour: "2-digit",
       minute: "2-digit"
     })
-  }
 
   return (
     <div style={styles.page}>
@@ -126,7 +158,7 @@ export default function Home() {
           <div style={styles.userBar}>
             👤 {user.username}
             <button onClick={logout} style={styles.logout}>
-              Cerrar sesión
+              Salir
             </button>
           </div>
         )}
@@ -135,14 +167,14 @@ export default function Home() {
           style={styles.mainButton}
           onClick={() => router.push("/pronosticos")}
         >
-          ✍️ Editar Pronósticos
+          ✍️ Pronósticos
         </button>
       </div>
 
       <div style={styles.container}>
         {matches.map((m) => (
           <div key={m.id} style={styles.card}>
-            <div style={styles.date}>🕒 {formatDate(m.match_date)}</div>
+            <div style={styles.date}>{formatDate(m.match_date)}</div>
 
             <div style={styles.match}>
               <div style={styles.team}>
@@ -173,50 +205,28 @@ export default function Home() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: { minHeight: "100vh", background: "#000", color: "white", padding: 16 },
+  page: { background: "#000", color: "#fff", minHeight: "100vh", padding: 16 },
   header: { textAlign: "center", marginBottom: 20 },
-  userBar: { marginTop: 10, display: "flex", justifyContent: "center", gap: 10 },
-  logout: {
-    background: "#ff4d4d",
-    border: "none",
-    padding: "4px 10px",
-    borderRadius: 6,
-    color: "white"
-  },
+  userBar: { display: "flex", justifyContent: "center", gap: 10 },
+  logout: { background: "#ff4d4d", border: "none", padding: "4px 8px" },
   mainButton: {
     marginTop: 10,
-    padding: "8px 12px",
-    borderRadius: 8,
+    padding: "6px 12px",
     background: "#1f6feb",
-    color: "white",
+    borderRadius: 6,
     border: "none"
   },
-  container: {
-    maxWidth: 700,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10
-  },
-  card: {
-    background: "rgba(255,255,255,0.05)",
-    padding: 12,
-    borderRadius: 10
-  },
-  date: { fontSize: 12, opacity: 0.6, marginBottom: 8 },
+  container: { maxWidth: 700, margin: "0 auto" },
+  card: { background: "#111", padding: 12, marginBottom: 10, borderRadius: 8 },
   match: {
     display: "grid",
     gridTemplateColumns: "1fr 120px 1fr",
     alignItems: "center"
   },
-  team: { display: "flex", gap: 8, alignItems: "center" },
-  teamRight: {
-    display: "flex",
-    gap: 8,
-    justifyContent: "flex-end",
-    alignItems: "center"
-  },
+  team: { display: "flex", gap: 6 },
+  teamRight: { display: "flex", justifyContent: "flex-end", gap: 6 },
   center: { textAlign: "center" },
   score: { fontWeight: "bold" },
-  prediction: { fontSize: 12, opacity: 0.7 }
+  prediction: { fontSize: 12, opacity: 0.7 },
+  date: { fontSize: 12, opacity: 0.6 }
 }
