@@ -30,9 +30,6 @@ type User = {
 const normalize = (str: string) =>
   str.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim()
 
-/**
- * ⚠️ IMPORTANTE: claves con espacios VAN ENTRE COMILLAS
- */
 const countryMap: Record<string, string> = {
   espana: "ES",
   argentina: "AR",
@@ -176,30 +173,15 @@ export default function Home() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#000",
-    color: "white",
-    padding: 16,
-    fontFamily: "sans-serif"
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: 20
-  },
-  userBar: {
-    marginTop: 10,
-    display: "flex",
-    justifyContent: "center",
-    gap: 10
-  },
+  page: { minHeight: "100vh", background: "#000", color: "white", padding: 16 },
+  header: { textAlign: "center", marginBottom: 20 },
+  userBar: { marginTop: 10, display: "flex", justifyContent: "center", gap: 10 },
   logout: {
     background: "#ff4d4d",
     border: "none",
     padding: "4px 10px",
     borderRadius: 6,
-    color: "white",
-    cursor: "pointer"
+    color: "white"
   },
   mainButton: {
     marginTop: 10,
@@ -207,8 +189,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     background: "#1f6feb",
     color: "white",
-    border: "none",
-    cursor: "pointer"
+    border: "none"
   },
   container: {
     maxWidth: 700,
@@ -222,35 +203,20 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 12,
     borderRadius: 10
   },
-  date: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 8
-  },
+  date: { fontSize: 12, opacity: 0.6, marginBottom: 8 },
   match: {
     display: "grid",
     gridTemplateColumns: "1fr 120px 1fr",
     alignItems: "center"
   },
-  team: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center"
-  },
+  team: { display: "flex", gap: 8, alignItems: "center" },
   teamRight: {
     display: "flex",
     gap: 8,
     justifyContent: "flex-end",
     alignItems: "center"
   },
-  center: {
-    textAlign: "center"
-  },
-  score: {
-    fontWeight: "bold"
-  },
-  prediction: {
-    fontSize: 12,
-    opacity: 0.7
-  }
+  center: { textAlign: "center" },
+  score: { fontWeight: "bold" },
+  prediction: { fontSize: 12, opacity: 0.7 }
 }

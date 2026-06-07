@@ -13,6 +13,14 @@ type Match = {
   round_id: number
 }
 
+type Prediction = {
+  match_id: number
+  predicted_home: number
+  predicted_away: number
+}
+
+type PredictionsMap = Record<number, Prediction>
+
 type User = {
   id: number
 }
@@ -40,7 +48,7 @@ export default function PronosticosPage() {
   const router = useRouter()
 
   const [matches, setMatches] = useState<Match[]>([])
-  const [predictions, setPredictions] = useState<any>({})
+  const [predictions, setPredictions] = useState<PredictionsMap>({})
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -71,12 +79,19 @@ export default function PronosticosPage() {
     setMatches(roundMatches)
   }
 
-  const update = (id: number, field: string, value: number) => {
-    setPredictions((prev: any) => ({
+  const update = (id: number, field: keyof Prediction, value: number) => {
+    setPredictions((prev) => ({
       ...prev,
       [id]: {
-        ...prev[id],
-        [field]: value
+        match_id: id,
+        predicted_home:
+          field === "predicted_home"
+            ? value
+            : prev[id]?.predicted_home ?? 0,
+        predicted_away:
+          field === "predicted_away"
+            ? value
+            : prev[id]?.predicted_away ?? 0
       }
     }))
   }
@@ -85,10 +100,12 @@ export default function PronosticosPage() {
     if (!user) return
 
     for (const [matchId, p] of Object.entries(predictions)) {
+      const pred = p as Prediction
+
       await supabase.from("predictions").upsert({
         match_id: Number(matchId),
-        predicted_home: p.predicted_home ?? 0,
-        predicted_away: p.predicted_away ?? 0,
+        predicted_home: pred.predicted_home ?? 0,
+        predicted_away: pred.predicted_away ?? 0,
         user_id: user.id
       })
     }
@@ -155,12 +172,7 @@ export default function PronosticosPage() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    minHeight: "100vh",
-    background: "#000",
-    color: "white",
-    padding: 16
-  },
+  page: { minHeight: "100vh", background: "#000", color: "white", padding: 16 },
   container: {
     maxWidth: 700,
     margin: "0 auto",
@@ -178,11 +190,7 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: "1fr 120px 1fr",
     alignItems: "center"
   },
-  team: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center"
-  },
+  team: { display: "flex", gap: 8, alignItems: "center" },
   teamRight: {
     display: "flex",
     gap: 8,
