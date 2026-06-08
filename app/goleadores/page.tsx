@@ -4,30 +4,41 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
+type Player = {
+  id: number;
+  name: string;
+  team: string;
+};
+
+type Selection = {
+  country: string;
+  player_id: string; // mantenemos string para UI estable
+};
+
 export default function GoleadoresPage() {
   const [user, setUser] = useState<any>(null);
   const [round, setRound] = useState<any>(null);
-  const [players, setPlayers] = useState<any[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
-  const [selected, setSelected] = useState<any[]>([]);
-  const [goalsMap, setGoalsMap] = useState<Record<number, number>>({});
-  const [locked, setLocked] = useState(false);
+  const [selected, setSelected] = useState<Selection[]>([
+    { country: "", player_id: "" },
+    { country: "", player_id: "" },
+    { country: "", player_id: "" },
+  ]);
   const [loading, setLoading] = useState(false);
+  const [locked, setLocked] = useState(false);
 
   useEffect(() => {
     init();
   }, []);
 
   async function init() {
-    const storedUser = localStorage.getItem("user");
-    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    const stored = localStorage.getItem("user");
+    const parsed = stored ? JSON.parse(stored) : null;
 
-    if (!parsedUser) {
-      alert("Debes hacer login");
-      return;
-    }
+    if (!parsed) return;
 
-    setUser(parsedUser);
+    setUser(parsed);
 
     const { data: r } = await supabase
       .from("rounds")
@@ -38,7 +49,38 @@ export default function GoleadoresPage() {
     setRound(r);
     if (!r) return;
 
-    // LOCK
+    const { data: p } = await supabase.from("players").select("*");
+
+    const uniquePlayers = Array.from(
+      new Map(
+        (p ?? []).map((x: Player) => [`${x.name}-${x.team}`, x])
+      ).values()
+    );
+
+    setPlayers(uniquePlayers);
+
+    setCountries([...new Set(uniquePlayers.map((p) => p.team))]);
+
+    // cargar predicciones existentes
+    const { data: existing } = await supabase
+      .from("player_predictions")
+      .select("*")
+      .eq("user_id", parsed.id)
+      .eq("round_id", r.id);
+
+    if (existing?.length) {
+      const filled = existing.map((e: any) => ({
+        country:
+          uniquePlayers.find((p) => p.id === e.player_id)?.team || "",
+        player_id: String(e.player_id), // 👈 IMPORTANTE: string limpio
+      }));
+
+      setSelected(
+        [...filled, ...Array(3 - filled.length).fill({ country: "", player_id: "" })].slice(0, 3)
+      );
+    }
+
+    // lock por fecha
     const { data: matches } = await supabase
       .from("matches")
       .select("match_date")
@@ -49,82 +91,38 @@ export default function GoleadoresPage() {
       const first = new Date(matches[0].match_date);
       if (new Date() >= first) setLocked(true);
     }
-
-    // PLAYERS
-    const { data: p } = await supabase.from("players").select("*");
-
-    const uniquePlayers = Array.from(
-      new Map(
-        (p ?? []).map((x) => [`${x.name}-${x.team}`.toLowerCase(), x])
-      ).values()
-    );
-
-    setPlayers(uniquePlayers);
-
-    const uniqueCountries = Array.from(
-      new Set(uniquePlayers.map((x) => x.team))
-    );
-    setCountries(uniqueCountries);
-
-    // GOALS
-    const { data: goals } = await supabase
-      .from("player_goals")
-      .select("*")
-      .eq("round_id", r.id);
-
-    const gMap: Record<number, number> = {};
-    goals?.forEach((g) => {
-      gMap[Number(g.player_id)] = Number(g.goals ?? 0);
-    });
-
-    setGoalsMap(gMap);
-
-    // 🔥 PREDICCIONES (FIX REAL AQUÍ)
-    const { data: existing } = await supabase
-      .from("player_predictions")
-      .select("*")
-      .eq("user_id", parsedUser.id)
-      .eq("round_id", r.id);
-
-    console.log("EXISTING RAW:", existing);
-
-    let initial = [
-      { country: "", player_id: "" },
-      { country: "", player_id: "" },
-      { country: "", player_id: "" },
-    ];
-
-    if (existing?.length) {
-      const filled = existing.map((e) => {
-        const pid = Number(e.player_id);
-
-        // 🔥 BUSQUEDA DIRECTA SIN MAP
-        const player = uniquePlayers.find(
-          (p) => Number(p.id) === pid
-        );
-
-        console.log("MATCH:", pid, player);
-
-        return {
-          country: player?.team || "",
-          player_id: pid ? String(pid) : "",
-        };
-      });
-
-      initial = filled.slice(0, 3);
-    }
-
-    console.log("INITIAL STATE:", initial);
-
-    setSelected(initial);
   }
 
   function getPlayersByCountry(country: string) {
     return players.filter((p) => p.team === country);
   }
 
+  function updateSelection(
+    index: number,
+    field: "country" | "player_id",
+    value: string
+  ) {
+    setSelected((prev) => {
+      const copy = [...prev];
+
+      if (field === "country") {
+        copy[index] = {
+          country: value,
+          player_id: "",
+        };
+      } else {
+        copy[index] = {
+          ...copy[index],
+          player_id: value,
+        };
+      }
+
+      return copy;
+    });
+  }
+
   async function save() {
-    if (locked) return;
+    if (locked || !user || !round) return;
 
     setLoading(true);
 
@@ -137,21 +135,27 @@ export default function GoleadoresPage() {
     for (const s of selected) {
       if (!s.player_id) continue;
 
+      // 🔥 FIX CRÍTICO: sanitización total del ID
+      const playerId = Number(String(s.player_id).replace(/[^\d]/g, ""));
+
+      if (!playerId) continue;
+
       await supabase.from("player_predictions").insert({
         user_id: user.id,
         round_id: round.id,
-        player_id: Number(s.player_id),
+        player_id: playerId, // 👈 SIEMPRE LIMPIO
       });
     }
 
     setLoading(false);
-    alert("Guardado");
+    alert("Guardado correctamente");
   }
 
   return (
     <div className="min-h-screen bg-black text-white px-4 py-6">
 
-      <div className="flex justify-between max-w-md mx-auto mb-6">
+      {/* HEADER (LOOK & FEEL ORIGINAL) */}
+      <div className="flex justify-between max-w-md mx-auto mb-4">
         <Link href="/" className="bg-gray-700 px-2 py-1 rounded text-xs">
           ← Volver
         </Link>
@@ -159,12 +163,22 @@ export default function GoleadoresPage() {
         <button
           onClick={save}
           disabled={loading || locked}
-          className="bg-green-600 px-2 py-1 rounded text-xs"
+          className={`px-2 py-1 rounded text-xs ${
+            locked ? "bg-gray-600" : "bg-green-600"
+          }`}
         >
-          Guardar
+          {locked ? "Bloqueado" : loading ? "Guardando..." : "Guardar"}
         </button>
       </div>
 
+      {/* TITLE */}
+      <div className="text-center mb-4">
+        <h1 className="text-sm font-semibold">
+          ⚽ Pronóstico goleadores
+        </h1>
+      </div>
+
+      {/* SELECTORES */}
       <div className="space-y-3 max-w-md mx-auto">
 
         {selected.map((s, i) => (
@@ -174,28 +188,25 @@ export default function GoleadoresPage() {
               disabled={locked}
               className="w-full bg-gray-800 p-2 mb-2 text-xs"
               value={s.country}
-              onChange={(e) => {
-                const copy = [...selected];
-                copy[i].country = e.target.value;
-                copy[i].player_id = "";
-                setSelected(copy);
-              }}
+              onChange={(e) =>
+                updateSelection(i, "country", e.target.value)
+              }
             >
               <option value="">País</option>
               {countries.map((c) => (
-                <option key={c}>{c}</option>
+                <option key={c} value={c}>
+                  {c}
+                </option>
               ))}
             </select>
 
             <select
-              disabled={locked}
+              disabled={locked || !s.country}
               className="w-full bg-gray-800 p-2 text-xs"
               value={s.player_id}
-              onChange={(e) => {
-                const copy = [...selected];
-                copy[i].player_id = e.target.value;
-                setSelected(copy);
-              }}
+              onChange={(e) =>
+                updateSelection(i, "player_id", e.target.value)
+              }
             >
               <option value="">Jugador</option>
               {getPlayersByCountry(s.country).map((p) => (
@@ -204,12 +215,6 @@ export default function GoleadoresPage() {
                 </option>
               ))}
             </select>
-
-            {s.player_id && (
-              <div className="text-right text-[11px] text-green-400 mt-1">
-                ⚽ {goalsMap[Number(s.player_id)] ?? 0} goles
-              </div>
-            )}
 
           </div>
         ))}
