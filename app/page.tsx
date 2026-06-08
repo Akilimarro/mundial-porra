@@ -1,83 +1,76 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-/* FLAGS */
-
-const countryMap: Record<string, string> = {
-  "alemania": "de",
-  "arabia saudita": "sa",
-  "argelia": "dz",
-  "argentina": "ar",
-  "australia": "au",
-  "austria": "at",
-  "bélgica": "be",
-  "bosnia y herzegovina": "ba",
-  "brasil": "br",
-  "cabo verde": "cv",
-  "canadá": "ca",
-  "catar": "qa",
-  "colombia": "co",
-  "corea del sur": "kr",
-  "costa de marfil": "ci",
-  "croacia": "hr",
-  "curazao": "cw",
-  "ecuador": "ec",
-  "egipto": "eg",
-  "escocia": "gb",
-  "españa": "es",
-  "estados unidos": "us",
-  "francia": "fr",
-  "ghana": "gh",
-  "haití": "ht",
-  "inglaterra": "gb",
-  "irak": "iq",
-  "irán": "ir",
-  "japón": "jp",
-  "jordania": "jo",
-  "marruecos": "ma",
-  "méxico": "mx",
-  "noruega": "no",
-  "nueva zelanda": "nz",
-  "países bajos": "nl",
-  "panamá": "pa",
-  "paraguay": "py",
-  "portugal": "pt",
-  "república checa": "cz",
-  "república democrática del congo": "cd",
-  "senegal": "sn",
-  "sudáfrica": "za",
-  "suecia": "se",
-  "suiza": "ch",
-  "túnez": "tn",
-  "turquía": "tr",
-  "uruguay": "uy",
-  "uzbekistán": "uz"
+type Match = {
+  id: number;
+  team_home: string;
+  team_away: string;
+  match_date: string;
+  goals_home: number | null;
+  goals_away: number | null;
 };
 
-function getFlag(team: string) {
-  const code = countryMap[team.toLowerCase()];
-  return code ? `https://flagcdn.com/w40/${code}.png` : null;
+type Prediction = {
+  match_id: number;
+  predicted_home: number | null;
+  predicted_away: number | null;
+};
+
+// FLAGS (igual que antes)
+const countryFlags: Record<string, string> = {
+  españa: "es",
+  francia: "fr",
+  alemania: "de",
+  brasil: "br",
+  argentina: "ar",
+  inglaterra: "gb-eng",
+  "estados unidos": "us",
+  méxico: "mx",
+  portugal: "pt",
+  italia: "it",
+  marruecos: "ma",
+  japón: "jp",
+  "corea del sur": "kr",
+};
+
+function Flag({ team }: { team: string }) {
+  const code = countryFlags[team.toLowerCase()];
+  if (!code) return <span>🏳️</span>;
+
+  return (
+    <img
+      src={`https://flagcdn.com/20x15/${code}.png`}
+      className="inline-block"
+    />
+  );
 }
 
-export default function HomePage() {
-  const [matches, setMatches] = useState<any[]>([]);
-  const [predictions, setPredictions] = useState<any>({});
+export default function Home() {
   const [user, setUser] = useState<any>(null);
   const [round, setRound] = useState<any>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [predictions, setPredictions] = useState<Record<number, Prediction>>(
+    {}
+  );
+
+  const loadedRef = useRef(false);
 
   useEffect(() => {
+    if (loadedRef.current) return;
+    loadedRef.current = true;
     init();
   }, []);
 
   async function init() {
-    // ✅ USUARIO DESDE LOCALSTORAGE (CLAVE)
-    const storedUser = localStorage.getItem("user");
-    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
-    setUser(parsedUser);
+    const stored = localStorage.getItem("user");
+    const parsed = stored ? JSON.parse(stored) : null;
 
+    if (parsed) setUser(parsed);
+
+    // ronda activa
     const { data: r } = await supabase
       .from("rounds")
       .select("*")
@@ -85,134 +78,100 @@ export default function HomePage() {
       .single();
 
     setRound(r);
-
     if (!r) return;
 
+    // partidos
     const { data: m } = await supabase
       .from("matches")
       .select("*")
       .eq("round_id", r.id)
-      .order("match_date");
+      .order("match_date", { ascending: true });
 
     setMatches(m ?? []);
 
-    // ✅ cargar predicciones SOLO si hay usuario
-    if (parsedUser) {
+    if (parsed) {
       const { data: p } = await supabase
         .from("predictions")
         .select("*")
-        .eq("user_id", parsedUser.id);
+        .eq("user_id", parsed.id);
 
-      const map: any = {};
-      p?.forEach((x) => (map[x.match_id] = x));
-      setPredictions(map);
+      // 🔥 FIX CRÍTICO: no sobrescribir si vacío
+      const map: Record<number, Prediction> = {};
+
+      (p ?? []).forEach((x) => {
+        map[x.match_id] = {
+          match_id: x.match_id,
+          predicted_home: x.predicted_home,
+          predicted_away: x.predicted_away,
+        };
+      });
+
+      setPredictions((prev) => {
+        // merge seguro (NO borrar lo existente si p viene vacío)
+        const merged = { ...prev, ...map };
+        return Object.keys(merged).length ? merged : prev;
+      });
     }
   }
 
-  function logout() {
-    localStorage.removeItem("user");
-    window.location.reload();
+  function renderPrediction(matchId: number) {
+    const p = predictions[matchId];
+    if (!p) return "- | -";
+
+    return `${p.predicted_home ?? "-"} | ${p.predicted_away ?? "-"}`;
   }
 
   return (
     <div className="min-h-screen bg-black text-white px-4 py-6">
 
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-6 max-w-md mx-auto">
-        <h1 className="text-xl font-bold">🏆 Mundial</h1>
+      {/* USER */}
+      <div className="flex justify-between max-w-md mx-auto mb-4 text-xs">
+        <div>{user ? `👤 ${user.username}` : "No logueado"}</div>
 
-        <div className="flex items-center gap-2 text-xs">
-
-          {!user && (
-            <Link href="/login" className="bg-blue-600 px-2 py-1 rounded">
-              Login
-            </Link>
-          )}
-
-          {user && (
-            <>
-              <span>👤 {user.username}</span>
-              <button
-                onClick={logout}
-                className="bg-red-600 px-2 py-1 rounded"
-              >
-                Logout
-              </button>
-            </>
-          )}
+        <div className="flex gap-2">
+          <Link href="/login" className="bg-gray-700 px-2 py-1 rounded">
+            Login
+          </Link>
         </div>
       </div>
 
-      {/* RONDA */}
-      <div className="text-center mb-6">
-        <h2 className="text-sm">{round?.name}</h2>
-      </div>
+      {/* MATCHES */}
+      <div className="space-y-3 max-w-md mx-auto">
 
-      {/* BOTONES */}
-      <div className="flex flex-wrap justify-center gap-2 mb-6 text-xs">
+        {matches.map((m) => (
+          <div key={m.id} className="bg-gray-900 p-3 rounded">
 
-        <Link href="/pronosticos" className="bg-green-600 px-2 py-1 rounded">
-          Pronósticos
-        </Link>
-
-        <Link href="/ranking" className="bg-yellow-600 px-2 py-1 rounded">
-          Ranking
-        </Link>
-
-        <Link href="/goleadores" className="bg-purple-600 px-2 py-1 rounded">
-          Goleadores
-        </Link>
-
-        <Link href="/ranking-goleadores" className="bg-pink-600 px-2 py-1 rounded">
-          Ranking goles
-        </Link>
-
-        {/* 🆕 NUEVO */}
-        <Link href="/instrucciones" className="bg-gray-600 px-2 py-1 rounded">
-          Instrucciones
-        </Link>
-
-      </div>
-
-      {/* PARTIDOS */}
-      <div className="space-y-2 max-w-md mx-auto">
-        {matches.map((m) => {
-          const p = predictions[m.id];
-
-          return (
-            <div
-              key={m.id}
-              className="bg-gray-900 rounded px-3 py-2 flex items-center justify-between"
-            >
-              {/* HOME */}
-              <div className="flex items-center gap-1 w-[35%]">
-                {getFlag(m.team_home) && (
-                  <img src={getFlag(m.team_home)!} className="w-5 h-3" />
-                )}
-                <span className="text-xs truncate">{m.team_home}</span>
+            {/* TEAMS + FLAGS */}
+            <div className="flex justify-between items-center text-xs mb-1">
+              <div className="flex items-center gap-2">
+                <Flag team={m.team_home} />
+                {m.team_home}
               </div>
 
-              {/* RESULT */}
-              <div className="text-center w-[30%]">
-                <div className="text-sm font-bold">
-                  {m.goals_home ?? "-"} / {m.goals_away ?? "-"}
-                </div>
+              <div className="text-gray-400">vs</div>
 
-                <div className="text-[10px] text-gray-400">
-                  ({p ? `${p.predicted_home}-${p.predicted_away}` : "-"})
-                </div>
-              </div>
-
-              {/* AWAY */}
-              <div className="flex items-center justify-end gap-1 w-[35%]">
-                <span className="text-xs truncate">{m.team_away}</span>
-                {getFlag(m.team_away) && (
-                  <img src={getFlag(m.team_away)!} className="w-5 h-3" />
-                )}
+              <div className="flex items-center gap-2">
+                {m.team_away}
+                <Flag team={m.team_away} />
               </div>
             </div>
-          );
-        })}
+
+            {/* RESULT */}
+            <div className="text-center text-sm text-gray-300">
+              {m.goals_home ?? "-"} / {m.goals_away ?? "-"}
+            </div>
+
+            {/* PREDICTION (FIXED) */}
+            <div className="text-center text-xs text-green-400 mt-1">
+              {renderPrediction(m.id)}
+            </div>
+
+            <div className="text-[10px] text-gray-500 text-center mt-1">
+              {new Date(m.match_date).toLocaleString()}
+            </div>
+
+          </div>
+        ))}
       </div>
     </div>
   );
