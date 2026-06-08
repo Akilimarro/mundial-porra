@@ -47,12 +47,6 @@ export default function RankingGoleadoresPage() {
   async function loadRanking(roundId: number) {
     setLoading(true);
 
-    /**
-     * 1. goles por jugador en la ronda
-     * 2. predicciones de jugadores por usuario
-     * 3. sumar goles reales de jugadores elegidos
-     */
-
     const { data: goals } = await supabase
       .from("player_goals")
       .select("*")
@@ -130,7 +124,7 @@ export default function RankingGoleadoresPage() {
         >
           {rounds.map((r) => (
             <option key={r.id} value={r.id}>
-              Fase {r.id} {r.active ? "(Activa)" : ""}
+              {r.name || `Ronda ${r.id}`} {r.active ? "(Activa)" : ""}
             </option>
           ))}
         </select>
