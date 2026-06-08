@@ -11,6 +11,7 @@ export default function GoleadoresPage() {
   const [countries, setCountries] = useState<string[]>([]);
   const [selected, setSelected] = useState<any[]>([]);
   const [goalsMap, setGoalsMap] = useState<any>({});
+  const [playerById, setPlayerById] = useState<Record<number, any>>({});
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -38,7 +39,7 @@ export default function GoleadoresPage() {
     setRound(r);
     if (!r) return;
 
-    // 🔒 BLOQUEO POR FECHA
+    // 🔒 BLOQUEO
     const { data: matches } = await supabase
       .from("matches")
       .select("match_date")
@@ -46,30 +47,31 @@ export default function GoleadoresPage() {
       .order("match_date", { ascending: true });
 
     if (matches?.length) {
-      const firstMatch = new Date(matches[0].match_date);
-      if (new Date() >= firstMatch) {
-        setLocked(true);
-      }
+      const first = new Date(matches[0].match_date);
+      if (new Date() >= first) setLocked(true);
     }
 
-    // ✅ PLAYERS (FIX DUPLICADOS REAL)
+    // 👥 PLAYERS
     const { data: p } = await supabase.from("players").select("*");
 
     const uniquePlayers = Array.from(
       new Map(
-        (p ?? []).map((x) => [
-          `${x.name}-${x.team}`.toLowerCase(),
-          x,
-        ])
+        (p ?? []).map((x) => [`${x.name}-${x.team}`.toLowerCase(), x])
       ).values()
     );
 
     setPlayers(uniquePlayers);
 
+    // 🔥 MAPA POR ID (CLAVE DEL FIX)
+    const byId: Record<number, any> = {};
+    uniquePlayers.forEach((p) => {
+      byId[p.id] = p;
+    });
+    setPlayerById(byId);
+
     const uniqueCountries = Array.from(
       new Set(uniquePlayers.map((x) => x.team))
     );
-
     setCountries(uniqueCountries);
 
     // ⚽ GOLES
@@ -85,7 +87,7 @@ export default function GoleadoresPage() {
 
     setGoalsMap(gMap);
 
-    // 📥 CARGAR SELECCIÓN
+    // 📥 PREDICCIONES
     const { data: existing } = await supabase
       .from("player_predictions")
       .select("*")
@@ -100,13 +102,12 @@ export default function GoleadoresPage() {
 
     if (existing?.length) {
       const filled = existing.map((e) => {
-        const player = uniquePlayers.find(
-          (pl) => pl.id === e.player_id
-        );
+        const pid = Number(e.player_id);
+        const player = byId[pid];
 
         return {
           country: player?.team || "",
-          player_id: String(e.player_id),
+          player_id: pid ? String(pid) : "",
         };
       });
 
@@ -150,7 +151,6 @@ export default function GoleadoresPage() {
       }
 
       alert("✅ Guardado");
-
     } catch (err: any) {
       alert("❌ Error: " + err.message);
     }
@@ -194,7 +194,7 @@ export default function GoleadoresPage() {
       {/* SELECTORES */}
       <div className="space-y-3 max-w-md mx-auto">
         {selected.map((s, i) => {
-          const playerGoals = goalsMap[s.player_id] ?? 0;
+          const goals = goalsMap[s.player_id] ?? 0;
 
           return (
             <div key={i} className="bg-gray-900 p-3 rounded">
@@ -243,7 +243,7 @@ export default function GoleadoresPage() {
 
               {s.player_id && (
                 <div className="text-right text-[11px] text-green-400 mt-1">
-                  ⚽ {playerGoals} goles
+                  ⚽ {goals} goles
                 </div>
               )}
 
