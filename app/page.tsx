@@ -87,7 +87,6 @@ function Flag({ team }: { team: string }) {
 
 export default function Home() {
   const [user, setUser] = useState<any>(null);
-  const [round, setRound] = useState<any>(null);
   const [matches, setMatches] = useState<Match[]>([]);
   const [predictions, setPredictions] = useState<Record<number, Prediction>>(
     {}
@@ -107,26 +106,22 @@ export default function Home() {
 
     if (parsed) setUser(parsed);
 
-    // RONDA ACTIVA
-    const { data: r } = await supabase
+    const { data: round } = await supabase
       .from("rounds")
       .select("*")
       .eq("active", true)
       .single();
 
-    setRound(r);
-    if (!r) return;
+    if (!round) return;
 
-    // PARTIDOS
     const { data: m } = await supabase
       .from("matches")
       .select("*")
-      .eq("round_id", r.id)
+      .eq("round_id", round.id)
       .order("match_date", { ascending: true });
 
     setMatches(m ?? []);
 
-    // 🔥 FIX REAL: merge seguro SIN borrar estado existente
     if (parsed) {
       const { data: p } = await supabase
         .from("predictions")
@@ -143,47 +138,72 @@ export default function Home() {
         };
       });
 
-      setPredictions((prev) => {
-        const merged = { ...map, ...prev };
-        return merged;
-      });
+      // 🔥 FIX: NO borrar estado si hay race condition
+      setPredictions((prev) => ({ ...map, ...prev }));
     }
   }
 
   function renderPrediction(matchId: number) {
     const p = predictions[matchId];
-    return p ? `${p.predicted_home ?? "-"} | ${p.predicted_away ?? "-"}` : "- | -";
+    return p
+      ? `${p.predicted_home ?? "-"} | ${p.predicted_away ?? "-"}`
+      : "- | -";
   }
 
   return (
     <div className="min-h-screen bg-black text-white px-4 py-6">
 
-      {/* HEADER ORIGINAL RESTAURADO */}
-      <div className="flex justify-between max-w-md mx-auto mb-4 text-xs">
+      {/* HEADER */}
+      <div className="max-w-md mx-auto mb-4">
 
-        <div>
-          {user ? `👤 ${user.username}` : "No logueado"}
-        </div>
-
-        <div className="flex gap-2">
+        {/* USER + LOGIN */}
+        <div className="flex justify-between text-xs mb-2">
+          <div>{user ? `👤 ${user.username}` : "No logueado"}</div>
 
           {!user && (
-            <Link href="/login" className="bg-gray-700 px-2 py-1 rounded">
+            <Link
+              href="/login"
+              className="bg-gray-700 px-2 py-1 rounded"
+            >
               Login
             </Link>
           )}
-
         </div>
 
+        {/* BOTONES (RESTAURADOS) */}
+        {user && (
+          <div className="flex flex-wrap gap-2 justify-center text-xs">
+
+            <Link href="/pronosticos" className="bg-gray-700 px-2 py-1 rounded">
+              Pronósticos
+            </Link>
+
+            <Link href="/ranking" className="bg-gray-700 px-2 py-1 rounded">
+              Ranking
+            </Link>
+
+            <Link href="/goleadores" className="bg-gray-700 px-2 py-1 rounded">
+              Pronóstico goleadores
+            </Link>
+
+            <Link href="/ranking-goleadores" className="bg-gray-700 px-2 py-1 rounded">
+              Ranking goleadores
+            </Link>
+
+            <Link href="/instrucciones" className="bg-gray-700 px-2 py-1 rounded">
+              Instrucciones
+            </Link>
+
+          </div>
+        )}
       </div>
 
-      {/* MATCH LIST */}
+      {/* PARTIDOS */}
       <div className="space-y-3 max-w-md mx-auto">
 
         {matches.map((m) => (
           <div key={m.id} className="bg-gray-900 p-3 rounded">
 
-            {/* TEAMS (MISMO LAYOUT ORIGINAL) */}
             <div className="flex justify-between items-center text-xs mb-1">
 
               <div className="flex items-center gap-2">
@@ -200,17 +220,14 @@ export default function Home() {
 
             </div>
 
-            {/* RESULTADO */}
             <div className="text-center text-sm text-gray-300">
               {m.goals_home ?? "-"} / {m.goals_away ?? "-"}
             </div>
 
-            {/* PRONÓSTICO */}
             <div className="text-center text-xs text-green-400 mt-1">
               {renderPrediction(m.id)}
             </div>
 
-            {/* FECHA */}
             <div className="text-[10px] text-gray-500 text-center mt-1">
               {new Date(m.match_date).toLocaleString()}
             </div>
