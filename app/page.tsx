@@ -4,66 +4,27 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-/* ---------------- FLAGS ---------------- */
+/* FLAGS */
 
 const countryMap: Record<string, string> = {
   "alemania": "de",
   "arabia saudita": "sa",
-  "argelia": "dz",
   "argentina": "ar",
-  "australia": "au",
-  "austria": "at",
-  "bélgica": "be",
-  "bosnia y herzegovina": "ba",
   "brasil": "br",
-  "cabo verde": "cv",
-  "canadá": "ca",
-  "catar": "qa",
-  "colombia": "co",
-  "corea del sur": "kr",
-  "costa de marfil": "ci",
-  "croacia": "hr",
-  "curazao": "cw",
-  "ecuador": "ec",
-  "egipto": "eg",
-  "escocia": "gb",
   "españa": "es",
-  "estados unidos": "us",
   "francia": "fr",
-  "ghana": "gh",
-  "haití": "ht",
   "inglaterra": "gb",
-  "irak": "iq",
-  "irán": "ir",
-  "japón": "jp",
-  "jordania": "jo",
-  "marruecos": "ma",
   "méxico": "mx",
-  "noruega": "no",
-  "nueva zelanda": "nz",
-  "países bajos": "nl",
-  "panamá": "pa",
-  "paraguay": "py",
   "portugal": "pt",
-  "república checa": "cz",
-  "república democrática del congo": "cd",
-  "senegal": "sn",
-  "sudáfrica": "za",
-  "suecia": "se",
-  "suiza": "ch",
-  "túnez": "tn",
-  "turquía": "tr",
   "uruguay": "uy",
-  "uzbekistán": "uz",
+  "estados unidos": "us",
+  "alemania": "de",
 };
 
 function getFlag(team: string) {
   const code = countryMap[team.toLowerCase()];
-  if (!code) return null;
-  return `https://flagcdn.com/w40/${code}.png`;
+  return code ? `https://flagcdn.com/w40/${code}.png` : null;
 }
-
-/* ---------------- PAGE ---------------- */
 
 export default function HomePage() {
   const [matches, setMatches] = useState<any[]>([]);
@@ -118,15 +79,15 @@ export default function HomePage() {
     <div className="min-h-screen bg-black text-white px-4 py-6">
 
       {/* HEADER */}
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">🏆 Mundial Porra</h1>
+      <div className="flex justify-between items-center mb-6 max-w-md mx-auto">
+        <h1 className="text-xl font-bold">🏆 Mundial</h1>
 
-        <div className="flex items-center gap-3 text-sm">
+        <div className="flex items-center gap-2 text-xs">
           {user && <span>👤 {user.email}</span>}
           {user && (
             <button
               onClick={logout}
-              className="bg-red-600 px-3 py-1 rounded text-xs"
+              className="bg-red-600 px-2 py-1 rounded"
             >
               Logout
             </button>
@@ -136,68 +97,62 @@ export default function HomePage() {
 
       {/* RONDA */}
       <div className="text-center mb-6">
-        <h2 className="text-lg font-semibold">{round?.name}</h2>
-        <img
-          src="https://upload.wikimedia.org/wikipedia/en/thumb/f/f3/FIFA_World_Cup_2022.svg/800px-FIFA_World_Cup_2022.svg.png"
-          className="h-16 mx-auto mt-2 opacity-80"
-        />
+        <h2 className="text-sm">{round?.name}</h2>
       </div>
 
       {/* BOTONES */}
-      <div className="flex flex-wrap justify-center gap-3 mb-6 text-sm">
-
-        <Link href="/pronosticos" className="bg-green-600 px-3 py-2 rounded">
+      <div className="flex flex-wrap justify-center gap-2 mb-6 text-xs">
+        <Link href="/pronosticos" className="bg-green-600 px-2 py-1 rounded">
           Pronósticos
         </Link>
 
-        <Link href="/ranking" className="bg-yellow-600 px-3 py-2 rounded">
+        <Link href="/ranking" className="bg-yellow-600 px-2 py-1 rounded">
           Ranking
         </Link>
 
-        <Link href="/goleadores" className="bg-purple-600 px-3 py-2 rounded">
+        <Link href="/goleadores" className="bg-purple-600 px-2 py-1 rounded">
           Goleadores
         </Link>
 
-        <Link href="/ranking-goleadores" className="bg-pink-600 px-3 py-2 rounded">
+        <Link href="/ranking-goleadores" className="bg-pink-600 px-2 py-1 rounded">
           Ranking goles
         </Link>
-
       </div>
 
       {/* PARTIDOS */}
-      <div className="space-y-3">
+      <div className="space-y-2 max-w-md mx-auto">
         {matches.map((m) => {
           const p = predictions[m.id];
 
           return (
             <div
               key={m.id}
-              className="bg-gray-900 rounded p-3 flex items-center justify-between"
+              className="bg-gray-900 rounded px-3 py-2 flex items-center justify-between"
             >
               {/* HOME */}
-              <div className="flex items-center gap-2 w-1/3">
+              <div className="flex items-center gap-1 w-[35%]">
                 {getFlag(m.team_home) && (
-                  <img src={getFlag(m.team_home)!} className="w-6 h-4" />
+                  <img src={getFlag(m.team_home)!} className="w-5 h-3" />
                 )}
-                <span className="text-sm">{m.team_home}</span>
+                <span className="text-xs truncate">{m.team_home}</span>
               </div>
 
               {/* RESULT */}
-              <div className="text-center w-1/3">
-                <div className="text-lg font-bold">
-                  {m.goals_home ?? "-"} - {m.goals_away ?? "-"}
+              <div className="text-center w-[30%]">
+                <div className="text-sm font-bold">
+                  {m.goals_home ?? "-"} / {m.goals_away ?? "-"}
                 </div>
 
-                <div className="text-xs text-gray-400">
+                <div className="text-[10px] text-gray-400">
                   ({p ? `${p.predicted_home}-${p.predicted_away}` : "-"})
                 </div>
               </div>
 
               {/* AWAY */}
-              <div className="flex items-center justify-end gap-2 w-1/3">
-                <span className="text-sm">{m.team_away}</span>
+              <div className="flex items-center justify-end gap-1 w-[35%]">
+                <span className="text-xs truncate">{m.team_away}</span>
                 {getFlag(m.team_away) && (
-                  <img src={getFlag(m.team_away)!} className="w-6 h-4" />
+                  <img src={getFlag(m.team_away)!} className="w-5 h-3" />
                 )}
               </div>
             </div>
