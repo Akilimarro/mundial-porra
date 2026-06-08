@@ -49,9 +49,7 @@ export default function Home() {
   const router = useRouter()
 
   const [matches, setMatches] = useState<Match[]>([])
-  const [predictions, setPredictions] = useState<
-    Record<number, Prediction>
-  >({})
+  const [predictions, setPredictions] = useState<Record<number, Prediction>>({})
   const [user, setUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -82,11 +80,7 @@ export default function Home() {
       .eq("user_id", userId)
 
     const map: Record<number, Prediction> = {}
-
-    data?.forEach((p) => {
-      map[p.match_id] = p
-    })
-
+    data?.forEach((p) => (map[p.match_id] = p))
     setPredictions(map)
   }
 
@@ -123,7 +117,7 @@ export default function Home() {
 
         <div style={styles.buttons}>
           {!user && (
-            <button onClick={() => router.push("/login")}>
+            <button style={styles.button} onClick={() => router.push("/login")}>
               Login
             </button>
           )}
@@ -132,16 +126,17 @@ export default function Home() {
             <>
               <span>👤 {user.username}</span>
 
-              <button onClick={() => router.push("/pronosticos")}>
+              <button style={styles.button} onClick={() => router.push("/pronosticos")}>
                 Pronósticos
               </button>
 
-              {/* 🔥 NUEVO */}
-              <button onClick={() => router.push("/ranking")}>
+              <button style={styles.button} onClick={() => router.push("/ranking")}>
                 Ranking
               </button>
 
-              <button onClick={logout}>Salir</button>
+              <button style={styles.buttonSecondary} onClick={logout}>
+                Salir
+              </button>
             </>
           )}
         </div>
@@ -164,11 +159,7 @@ export default function Home() {
                 <div style={styles.center}>
                   {m.goals_home ?? "-"} : {m.goals_away ?? "-"}
                   <div style={styles.pred}>
-                    (
-                    {p
-                      ? `${p.predicted_home}-${p.predicted_away}`
-                      : "-"}
-                    )
+                    ({p ? `${p.predicted_home}-${p.predicted_away}` : "-"})
                   </div>
                 </div>
 
@@ -186,44 +177,33 @@ export default function Home() {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  page: {
-    background: "#000",
-    color: "white",
-    minHeight: "100vh",
-    padding: 16
-  },
+  page: { background: "#000", color: "white", minHeight: "100vh", padding: 16 },
   header: { textAlign: "center", marginBottom: 20 },
-  buttons: {
-    display: "flex",
-    justifyContent: "center",
-    gap: 10,
-    flexWrap: "wrap"
+  buttons: { display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" },
+
+  button: {
+    background: "#1f6feb",
+    border: "none",
+    borderRadius: 6,
+    color: "white",
+    padding: "6px 12px",
+    cursor: "pointer"
   },
-  container: {
-    maxWidth: 700,
-    margin: "0 auto",
-    display: "flex",
-    flexDirection: "column",
-    gap: 10
+  buttonSecondary: {
+    background: "#444",
+    border: "none",
+    borderRadius: 6,
+    color: "white",
+    padding: "6px 12px",
+    cursor: "pointer"
   },
-  card: {
-    background: "rgba(255,255,255,0.05)",
-    padding: 12,
-    borderRadius: 10
-  },
-  date: { fontSize: 12, opacity: 0.6, marginBottom: 6 },
-  match: {
-    display: "grid",
-    gridTemplateColumns: "1fr 120px 1fr",
-    alignItems: "center"
-  },
+
+  container: { maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 },
+  card: { background: "rgba(255,255,255,0.05)", padding: 12, borderRadius: 10 },
+  date: { fontSize: 12, opacity: 0.6 },
+  match: { display: "grid", gridTemplateColumns: "1fr 120px 1fr", alignItems: "center" },
   team: { display: "flex", gap: 8, alignItems: "center" },
-  teamRight: {
-    display: "flex",
-    gap: 8,
-    justifyContent: "flex-end",
-    alignItems: "center"
-  },
+  teamRight: { display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" },
   center: { textAlign: "center" },
   pred: { fontSize: 12, opacity: 0.7 }
 }
