@@ -20,7 +20,7 @@ type Prediction = {
 };
 
 /* =========================
-   🌍 FLAGS COMPLETAS
+   🌍 FLAGS (SIN TILDES)
 ========================= */
 const countryFlags: Record<string, string> = {
   alemania: "de",
@@ -29,11 +29,11 @@ const countryFlags: Record<string, string> = {
   argentina: "ar",
   australia: "au",
   austria: "at",
-  bélgica: "be",
+  belgica: "be",
   "bosnia y herzegovina": "ba",
   brasil: "br",
   "cabo verde": "cv",
-  canadá: "ca",
+  canada: "ca",
   catar: "qa",
   colombia: "co",
   "corea del sur": "kr",
@@ -43,37 +43,37 @@ const countryFlags: Record<string, string> = {
   ecuador: "ec",
   egipto: "eg",
   escocia: "gb-sct",
-  españa: "es",
+  espana: "es",
   "estados unidos": "us",
   francia: "fr",
   ghana: "gh",
-  haití: "ht",
+  haiti: "ht",
   inglaterra: "gb-eng",
   irak: "iq",
-  irán: "ir",
-  japón: "jp",
+  iran: "ir",
+  japon: "jp",
   jordania: "jo",
   marruecos: "ma",
-  méxico: "mx",
+  mexico: "mx",
   noruega: "no",
   "nueva zelanda": "nz",
-  "países bajos": "nl",
-  panamá: "pa",
+  "paises bajos": "nl",
+  panama: "pa",
   paraguay: "py",
   portugal: "pt",
-  "república checa": "cz",
-  "república democrática del congo": "cd",
+  "republica checa": "cz",
+  "republica democratica del congo": "cd",
   senegal: "sn",
-  sudáfrica: "za",
+  sudafrica: "za",
   suecia: "se",
   suiza: "ch",
-  túnez: "tn",
-  turquía: "tr",
+  tunez: "tn",
+  turquia: "tr",
   uruguay: "uy",
-  uzbekistán: "uz",
+  uzbekistan: "uz",
 };
 
-// 🔥 FIX: normalización
+// 🔥 NORMALIZADOR CONSISTENTE
 function normalize(team: string) {
   return team
     .toLowerCase()
