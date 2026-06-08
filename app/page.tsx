@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 
-/* FLAGS COMPLETO SIN DUPLICADOS */
+/* FLAGS */
 
 const countryMap: Record<string, string> = {
   "alemania": "de",
@@ -73,8 +73,10 @@ export default function HomePage() {
   }, []);
 
   async function init() {
-    const { data: u } = await supabase.auth.getUser();
-    setUser(u.user);
+    // ✅ USUARIO DESDE LOCALSTORAGE (CLAVE)
+    const storedUser = localStorage.getItem("user");
+    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    setUser(parsedUser);
 
     const { data: r } = await supabase
       .from("rounds")
@@ -94,11 +96,12 @@ export default function HomePage() {
 
     setMatches(m ?? []);
 
-    if (u.user) {
+    // ✅ cargar predicciones SOLO si hay usuario
+    if (parsedUser) {
       const { data: p } = await supabase
         .from("predictions")
         .select("*")
-        .eq("user_id", u.user.id);
+        .eq("user_id", parsedUser.id);
 
       const map: any = {};
       p?.forEach((x) => (map[x.match_id] = x));
@@ -106,8 +109,8 @@ export default function HomePage() {
     }
   }
 
-  async function logout() {
-    await supabase.auth.signOut();
+  function logout() {
+    localStorage.removeItem("user");
     window.location.reload();
   }
 
@@ -119,14 +122,23 @@ export default function HomePage() {
         <h1 className="text-xl font-bold">🏆 Mundial</h1>
 
         <div className="flex items-center gap-2 text-xs">
-          {user && <span>👤 {user.email}</span>}
+
+          {!user && (
+            <Link href="/login" className="bg-blue-600 px-2 py-1 rounded">
+              Login
+            </Link>
+          )}
+
           {user && (
-            <button
-              onClick={logout}
-              className="bg-red-600 px-2 py-1 rounded"
-            >
-              Logout
-            </button>
+            <>
+              <span>👤 {user.username}</span>
+              <button
+                onClick={logout}
+                className="bg-red-600 px-2 py-1 rounded"
+              >
+                Logout
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -138,6 +150,7 @@ export default function HomePage() {
 
       {/* BOTONES */}
       <div className="flex flex-wrap justify-center gap-2 mb-6 text-xs">
+
         <Link href="/pronosticos" className="bg-green-600 px-2 py-1 rounded">
           Pronósticos
         </Link>
@@ -153,6 +166,12 @@ export default function HomePage() {
         <Link href="/ranking-goleadores" className="bg-pink-600 px-2 py-1 rounded">
           Ranking goles
         </Link>
+
+        {/* 🆕 NUEVO */}
+        <Link href="/instrucciones" className="bg-gray-600 px-2 py-1 rounded">
+          Instrucciones
+        </Link>
+
       </div>
 
       {/* PARTIDOS */}
