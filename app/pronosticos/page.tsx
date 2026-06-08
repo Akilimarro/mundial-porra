@@ -8,15 +8,22 @@ type Match = {
   id: number;
   team_home: string;
   team_away: string;
-  goals_home: number | "";
-  goals_away: number | "";
   match_date: string;
+  goals_home: number | null;
+  goals_away: number | null;
+};
+
+type Prediction = {
+  match_id: number;
+  predicted_home: number | null;
+  predicted_away: number | null;
 };
 
 export default function PronosticosPage() {
   const [user, setUser] = useState<any>(null);
   const [round, setRound] = useState<any>(null);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [predictions, setPredictions] = useState<Record<number, Prediction>>({});
   const [loading, setLoading] = useState(false);
   const [locked, setLocked] = useState(false);
 
@@ -25,16 +32,17 @@ export default function PronosticosPage() {
   }, []);
 
   async function init() {
-    const storedUser = localStorage.getItem("user");
-    const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+    const stored = localStorage.getItem("user");
+    const parsed = stored ? JSON.parse(stored) : null;
 
-    if (!parsedUser) {
+    if (!parsed) {
       alert("Debes hacer login");
       return;
     }
 
-    setUser(parsedUser);
+    setUser(parsed);
 
+    // RONDA ACTIVA
     const { data: r } = await supabase
       .from("rounds")
       .select("*")
@@ -44,71 +52,89 @@ export default function PronosticosPage() {
     setRound(r);
     if (!r) return;
 
+    // MATCHES
     const { data: m } = await supabase
       .from("matches")
       .select("*")
       .eq("round_id", r.id)
       .order("match_date", { ascending: true });
 
-    // ⚠️ normalizar datos para evitar undefined/null
-    const normalized =
-      (m ?? []).map((x: any) => ({
-        ...x,
-        goals_home: x.goals_home ?? "",
-        goals_away: x.goals_away ?? "",
-      })) || [];
-
-    setMatches(normalized);
+    setMatches(m ?? []);
 
     // LOCK POR FECHA
     if (m?.length) {
-      const firstMatch = new Date(m[0].match_date);
-      if (new Date() >= firstMatch) setLocked(true);
+      const first = new Date(m[0].match_date);
+      if (new Date() >= first) setLocked(true);
     }
+
+    // PREDICCIONES EXISTENTES (IMPORTANTE FIX)
+    const { data: p } = await supabase
+      .from("predictions")
+      .select("*")
+      .eq("user_id", parsed.id);
+
+    const map: Record<number, Prediction> = {};
+
+    (p ?? []).forEach((x: any) => {
+      map[x.match_id] = {
+        match_id: x.match_id,
+        predicted_home: x.predicted_home,
+        predicted_away: x.predicted_away,
+      };
+    });
+
+    setPredictions(map);
   }
 
-  function updateMatch(id: number, field: "home" | "away", value: string) {
-    const numValue = value === "" ? "" : Number(value);
+  function updatePrediction(
+    matchId: number,
+    field: "home" | "away",
+    value: string
+  ) {
+    const num = value === "" ? null : Number(value);
 
-    setMatches((prev) =>
-      prev.map((m) =>
-        m.id === id
-          ? {
-              ...m,
-              goals_home:
-                field === "home" ? numValue : m.goals_home,
-              goals_away:
-                field === "away" ? numValue : m.goals_away,
-            }
-          : m
-      )
-    );
+    setPredictions((prev) => {
+      const current = prev[matchId] ?? {
+        match_id: matchId,
+        predicted_home: null,
+        predicted_away: null,
+      };
+
+      return {
+        ...prev,
+        [matchId]: {
+          ...current,
+          predicted_home:
+            field === "home" ? num : current.predicted_home,
+          predicted_away:
+            field === "away" ? num : current.predicted_away,
+        },
+      };
+    });
   }
 
   async function save() {
-    if (locked) {
-      alert("❌ Ya ha empezado la ronda");
-      return;
-    }
+    if (locked) return;
 
     setLoading(true);
 
     try {
-      for (const m of matches) {
-        await supabase
-          .from("matches")
-          .update({
-            goals_home:
-              m.goals_home === "" ? null : Number(m.goals_home),
-            goals_away:
-              m.goals_away === "" ? null : Number(m.goals_away),
-          })
-          .eq("id", m.id);
+      for (const match of matches) {
+        const p = predictions[match.id];
+
+        if (!p) continue;
+
+        await supabase.from("predictions").upsert({
+          user_id: user.id,
+          match_id: match.id,
+          predicted_home: p.predicted_home ?? 0,
+          predicted_away: p.predicted_away ?? 0,
+        });
       }
 
-      alert("✅ Guardado correctamente");
-    } catch (err: any) {
-      alert("❌ Error: " + err.message);
+      alert("✅ Guardado");
+    } catch (e: any) {
+      alert("❌ Error: " + e.message);
     }
 
     setLoading(false);
@@ -142,63 +168,65 @@ export default function PronosticosPage() {
 
         {locked && (
           <div className="text-red-400 text-[11px] mt-1">
-            🔒 Ronda iniciada - edición bloqueada
+            🔒 Ronda iniciada
           </div>
         )}
       </div>
 
-      {/* MATCHES */}
+      {/* LISTA MATCHES */}
       <div className="space-y-3 max-w-md mx-auto">
-        {matches.map((m) => (
-          <div key={m.id} className="bg-gray-900 p-3 rounded">
 
-            <div className="flex justify-between text-xs mb-2">
-              <span>{m.team_home}</span>
-              <span>{m.team_away}</span>
+        {matches.map((m) => {
+          const p = predictions[m.id];
+
+          return (
+            <div key={m.id} className="bg-gray-900 p-3 rounded">
+
+              {/* EQUIPOS */}
+              <div className="flex justify-between text-xs mb-2">
+                <span>{m.team_home}</span>
+                <span>{m.team_away}</span>
+              </div>
+
+              {/* INPUTS */}
+              <div className="flex items-center justify-between gap-2">
+
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  disabled={locked}
+                  className="w-14 bg-gray-800 text-center p-1 rounded"
+                  value={p?.predicted_home ?? ""}
+                  onChange={(e) =>
+                    updatePrediction(m.id, "home", e.target.value)
+                  }
+                  onWheel={(e) => (e.target as HTMLElement).blur()}
+                />
+
+                <span className="text-xs text-gray-400">-</span>
+
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  disabled={locked}
+                  className="w-14 bg-gray-800 text-center p-1 rounded"
+                  value={p?.predicted_away ?? ""}
+                  onChange={(e) =>
+                    updatePrediction(m.id, "away", e.target.value)
+                  }
+                  onWheel={(e) => (e.target as HTMLElement).blur()}
+                />
+              </div>
+
+              {/* FECHA */}
+              <div className="text-[10px] text-gray-400 mt-2 text-center">
+                {new Date(m.match_date).toLocaleString()}
+              </div>
             </div>
-
-            <div className="flex items-center justify-between gap-2">
-
-              {/* HOME */}
-              <input
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                min={0}
-                disabled={locked}
-                className="w-16 bg-gray-800 text-center p-1 rounded"
-                value={m.goals_home}
-                onChange={(e) =>
-                  updateMatch(m.id, "home", e.target.value)
-                }
-                onWheel={(e) => (e.target as HTMLElement).blur()}
-              />
-
-              <span className="text-xs text-gray-400">-</span>
-
-              {/* AWAY */}
-              <input
-                type="number"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                min={0}
-                disabled={locked}
-                className="w-16 bg-gray-800 text-center p-1 rounded"
-                value={m.goals_away}
-                onChange={(e) =>
-                  updateMatch(m.id, "away", e.target.value)
-                }
-                onWheel={(e) => (e.target as HTMLElement).blur()}
-              />
-            </div>
-
-            {/* FECHA */}
-            <div className="text-[10px] text-gray-400 mt-2 text-center">
-              {new Date(m.match_date).toLocaleString()}
-            </div>
-
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
