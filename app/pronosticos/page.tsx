@@ -39,6 +39,7 @@ const countryFlags: Record<string, string> = {
   ecuador: "ec",
   egipto: "eg",
   escocia: "gb-sct",
+  españa: "es",
   espana: "es",
   "estados unidos": "us",
   francia: "fr",
@@ -69,7 +70,7 @@ const countryFlags: Record<string, string> = {
   uzbekistan: "uz",
 };
 
-// 🔥 NORMALIZADOR CONSISTENTE
+// 🔥 NORMALIZADOR ROBUSTO (CLAVE DEL FIX)
 function normalize(team: string) {
   return team
     .toLowerCase()
@@ -87,6 +88,7 @@ function Flag({ team }: { team: string }) {
     <img
       src={`https://flagcdn.com/24x18/${code}.png`}
       className="inline-block rounded-sm"
+      alt={team}
     />
   );
 }
@@ -128,9 +130,12 @@ export default function PronosticosPage() {
 
     setMatches(m ?? []);
 
-    if (m?.length) {
-      const first = new Date(m[0].match_date);
-      if (new Date() >= first) setLocked(true);
+    // 🔒 BLOQUEO POR PRIMER PARTIDO (FIX COMPLETO)
+    if (m && m.length > 0) {
+      const firstMatchDate = new Date(m[0].match_date).getTime();
+      if (Date.now() >= firstMatchDate) {
+        setLocked(true);
+      }
     }
 
     const { data: p } = await supabase
@@ -179,7 +184,7 @@ export default function PronosticosPage() {
   }
 
   async function save() {
-    if (locked) return;
+    if (locked || !user) return;
 
     setLoading(true);
 
