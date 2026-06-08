@@ -69,8 +69,18 @@ const countryFlags: Record<string, string> = {
   uzbekistán: "uz",
 };
 
+// 🔥 NORMALIZADOR (LA CLAVE DEL FIX)
+function normalize(team: string) {
+  return team
+    .toLowerCase()
+    .normalize("NFD") // separa acentos
+    .replace(/[\u0300-\u036f]/g, "") // elimina acentos
+    .trim();
+}
+
 function Flag({ team }: { team: string }) {
-  const code = countryFlags[team.toLowerCase()];
+  const code = countryFlags[normalize(team)];
+
   if (!code) return <span className="text-xs">🏳️</span>;
 
   return (
@@ -192,7 +202,6 @@ export default function PronosticosPage() {
   return (
     <div className="min-h-screen bg-black text-white px-4 py-6">
 
-      {/* HEADER */}
       <div className="flex justify-between max-w-md mx-auto mb-4">
         <Link href="/" className="bg-gray-700 px-2 py-1 rounded text-xs">
           ← Volver
@@ -209,14 +218,12 @@ export default function PronosticosPage() {
         </button>
       </div>
 
-      {/* TITLE */}
       <div className="text-center mb-4">
         <h1 className="text-sm font-semibold">
           ⚽ Pronósticos de partidos
         </h1>
       </div>
 
-      {/* MATCHES */}
       <div className="space-y-3 max-w-md mx-auto">
 
         {matches.map((m) => {
@@ -225,7 +232,6 @@ export default function PronosticosPage() {
           return (
             <div key={m.id} className="bg-gray-900 p-3 rounded">
 
-              {/* EQUIPOS + FLAGS (RESTAURADO LOOK AND FEEL) */}
               <div className="flex justify-between items-center text-xs mb-2">
 
                 <div className="flex items-center gap-2">
@@ -242,7 +248,6 @@ export default function PronosticosPage() {
 
               </div>
 
-              {/* INPUTS */}
               <div className="flex items-center justify-between gap-2">
 
                 <input
@@ -274,7 +279,6 @@ export default function PronosticosPage() {
                 />
               </div>
 
-              {/* DATE */}
               <div className="text-[10px] text-gray-400 mt-2 text-center">
                 {new Date(m.match_date).toLocaleString()}
               </div>

@@ -73,8 +73,17 @@ const countryFlags: Record<string, string> = {
   uzbekistán: "uz",
 };
 
+// 🔥 FIX: normalización
+function normalize(team: string) {
+  return team
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
 function Flag({ team }: { team: string }) {
-  const code = countryFlags[team?.toLowerCase()];
+  const code = countryFlags[normalize(team)];
   if (!code) return <span>🏳️</span>;
 
   return (
@@ -138,7 +147,6 @@ export default function Home() {
         };
       });
 
-      // 🔥 FIX: NO borrar estado si hay race condition
       setPredictions((prev) => ({ ...map, ...prev }));
     }
   }
@@ -156,7 +164,6 @@ export default function Home() {
       {/* HEADER */}
       <div className="max-w-md mx-auto mb-4">
 
-        {/* USER + LOGIN */}
         <div className="flex justify-between text-xs mb-2">
           <div>{user ? `👤 ${user.username}` : "No logueado"}</div>
 
@@ -170,7 +177,6 @@ export default function Home() {
           )}
         </div>
 
-        {/* BOTONES (RESTAURADOS) */}
         {user && (
           <div className="flex flex-wrap gap-2 justify-center text-xs">
 
