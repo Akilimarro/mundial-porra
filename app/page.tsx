@@ -1,209 +1,125 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
-import ReactCountryFlag from "react-country-flag"
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 
-type Match = {
-  id: number
-  team_home: string
-  team_away: string
-  match_date: string
-  goals_home: number | null
-  goals_away: number | null
-}
-
-type Prediction = {
-  match_id: number
-  predicted_home: number | null
-  predicted_away: number | null
-}
-
-type User = {
-  id: number
-  username: string
-}
-
-const normalize = (str: string) =>
-  str.toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "").trim()
-
-const countryMap: Record<string, string> = {
-  espana: "ES",
-  francia: "FR",
-  brasil: "BR",
-  argentina: "AR",
-  mexico: "MX",
-  "estados unidos": "US",
-  alemania: "DE",
-  portugal: "PT",
-  italia: "IT",
-  inglaterra: "GB",
-  marruecos: "MA",
-  japon: "JP",
-  "corea del sur": "KR",
-  sudafrica: "ZA"
-}
-
-export default function Home() {
-  const router = useRouter()
-
-  const [matches, setMatches] = useState<Match[]>([])
-  const [predictions, setPredictions] = useState<Record<number, Prediction>>({})
-  const [user, setUser] = useState<User | null>(null)
+export default function HomePage() {
+  const [matches, setMatches] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
+  const [round, setRound] = useState<any>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem("user")
-    if (stored) {
-      const u = JSON.parse(stored)
-      setUser(u)
-      loadPredictions(u.id)
-    }
+    loadUser();
+    loadActiveRound();
+  }, []);
 
-    loadMatches()
-  }, [])
-
-  const loadMatches = async () => {
-    const { data } = await supabase
-      .from("matches")
-      .select("*, rounds(active)")
-      .eq("rounds.active", true)
-      .order("match_date")
-
-    if (data) setMatches(data)
+  async function loadUser() {
+    const { data } = await supabase.auth.getUser();
+    setUser(data.user ?? null);
   }
 
-  const loadPredictions = async (userId: number) => {
+  async function loadActiveRound() {
     const { data } = await supabase
-      .from("predictions")
+      .from("rounds")
       .select("*")
-      .eq("user_id", userId)
+      .eq("active", true)
+      .single();
 
-    const map: Record<number, Prediction> = {}
-    data?.forEach((p) => (map[p.match_id] = p))
-    setPredictions(map)
+    setRound(data);
+
+    if (data) {
+      const res = await supabase
+        .from("matches")
+        .select("*")
+        .eq("round_id", data.id)
+        .order("match_date", { ascending: true });
+
+      setMatches(res.data ?? []);
+    }
   }
 
-  const logout = () => {
-    localStorage.removeItem("user")
-    window.location.reload()
+  async function logout() {
+    await supabase.auth.signOut();
+    window.location.href = "/";
   }
-
-  const Flag = ({ team }: { team: string }) => {
-    const code = countryMap[normalize(team)]
-    if (!code) return <span>⚽</span>
-
-    return (
-      <ReactCountryFlag
-        countryCode={code}
-        svg
-        style={{ width: 22, height: 22 }}
-      />
-    )
-  }
-
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit"
-    })
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1>🏆 Mundial - Partidos</h1>
+    <div className="min-h-screen bg-black text-white p-6">
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">⚽ Mundial Porra</h1>
 
-        <div style={styles.buttons}>
-          {!user && (
-            <button style={styles.button} onClick={() => router.push("/login")}>
+        <div className="flex gap-2">
+          {!user ? (
+            <Link href="/login" className="bg-blue-600 px-4 py-2 rounded">
               Login
-            </button>
-          )}
-
-          {user && (
+            </Link>
+          ) : (
             <>
-              <span>👤 {user.username}</span>
-
-              <button style={styles.button} onClick={() => router.push("/pronosticos")}>
-                Pronósticos
-              </button>
-
-              <button style={styles.button} onClick={() => router.push("/ranking")}>
-                Ranking
-              </button>
-
-              <button style={styles.buttonSecondary} onClick={logout}>
-                Salir
+              <span className="text-sm opacity-70">
+                👤 {user.email}
+              </span>
+              <button onClick={logout} className="bg-red-600 px-4 py-2 rounded">
+                Logout
               </button>
             </>
           )}
         </div>
       </div>
 
-      <div style={styles.container}>
-        {matches.map((m) => {
-          const p = predictions[m.id]
+      {/* RONDA ACTIVA */}
+      <div className="bg-gray-900 p-4 rounded mb-6">
+        <h2 className="text-xl font-semibold">
+          🏆 {round?.name ?? "Sin ronda activa"}
+        </h2>
+      </div>
 
-          return (
-            <div key={m.id} style={styles.card}>
-              <div style={styles.date}>{formatDate(m.match_date)}</div>
+      {/* BOTONES NUEVOS */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <Link
+          href="/pronosticos"
+          className="bg-green-600 text-center py-3 rounded font-bold"
+        >
+          📊 Pronósticos partidos
+        </Link>
 
-              <div style={styles.match}>
-                <div style={styles.team}>
-                  <Flag team={m.team_home} />
-                  {m.team_home}
-                </div>
+        <Link
+          href="/ranking"
+          className="bg-yellow-600 text-center py-3 rounded font-bold"
+        >
+          🏅 Ranking general
+        </Link>
 
-                <div style={styles.center}>
-                  {m.goals_home ?? "-"} : {m.goals_away ?? "-"}
-                  <div style={styles.pred}>
-                    ({p ? `${p.predicted_home}-${p.predicted_away}` : "-"})
-                  </div>
-                </div>
+        <Link
+          href="/goleadores"
+          className="bg-purple-600 text-center py-3 rounded font-bold"
+        >
+          ⚽ Pronóstico goleadores
+        </Link>
 
-                <div style={styles.teamRight}>
-                  {m.team_away}
-                  <Flag team={m.team_away} />
-                </div>
-              </div>
+        <Link
+          href="/ranking-goleadores"
+          className="bg-pink-600 text-center py-3 rounded font-bold"
+        >
+          🥇 Ranking goleadores
+        </Link>
+      </div>
+
+      {/* PARTIDOS */}
+      <div className="space-y-3">
+        {matches.map((m) => (
+          <div key={m.id} className="bg-gray-800 p-3 rounded">
+            <div className="flex justify-between">
+              <span>{m.team_home}</span>
+              <span>
+                {m.goals_home ?? "-"} - {m.goals_away ?? "-"}
+              </span>
+              <span>{m.team_away}</span>
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
     </div>
-  )
-}
-
-const styles: Record<string, React.CSSProperties> = {
-  page: { background: "#000", color: "white", minHeight: "100vh", padding: 16 },
-  header: { textAlign: "center", marginBottom: 20 },
-  buttons: { display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" },
-
-  button: {
-    background: "#1f6feb",
-    border: "none",
-    borderRadius: 6,
-    color: "white",
-    padding: "6px 12px",
-    cursor: "pointer"
-  },
-  buttonSecondary: {
-    background: "#444",
-    border: "none",
-    borderRadius: 6,
-    color: "white",
-    padding: "6px 12px",
-    cursor: "pointer"
-  },
-
-  container: { maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 },
-  card: { background: "rgba(255,255,255,0.05)", padding: 12, borderRadius: 10 },
-  date: { fontSize: 12, opacity: 0.6 },
-  match: { display: "grid", gridTemplateColumns: "1fr 120px 1fr", alignItems: "center" },
-  team: { display: "flex", gap: 8, alignItems: "center" },
-  teamRight: { display: "flex", gap: 8, justifyContent: "flex-end", alignItems: "center" },
-  center: { textAlign: "center" },
-  pred: { fontSize: 12, opacity: 0.7 }
+  );
 }
