@@ -29,7 +29,6 @@ export default function GoleadoresPage() {
 
     setUser(parsedUser);
 
-    // ✅ RONDA ACTIVA
     const { data: r } = await supabase
       .from("rounds")
       .select("*")
@@ -37,30 +36,32 @@ export default function GoleadoresPage() {
       .single();
 
     setRound(r);
-
     if (!r) return;
 
-    // ✅ PARTIDOS → para bloqueo
+    // 🔒 BLOQUEO POR FECHA
     const { data: matches } = await supabase
       .from("matches")
       .select("match_date")
       .eq("round_id", r.id)
       .order("match_date", { ascending: true });
 
-    if (matches && matches.length > 0) {
+    if (matches?.length) {
       const firstMatch = new Date(matches[0].match_date);
-      const now = new Date();
-
-      if (now >= firstMatch) {
+      if (new Date() >= firstMatch) {
         setLocked(true);
       }
     }
 
-    // ✅ PLAYERS
+    // ✅ PLAYERS (FIX DUPLICADOS REAL)
     const { data: p } = await supabase.from("players").select("*");
 
     const uniquePlayers = Array.from(
-      new Map((p ?? []).map((x) => [x.id, x])).values()
+      new Map(
+        (p ?? []).map((x) => [
+          `${x.name}-${x.team}`.toLowerCase(),
+          x,
+        ])
+      ).values()
     );
 
     setPlayers(uniquePlayers);
@@ -71,7 +72,7 @@ export default function GoleadoresPage() {
 
     setCountries(uniqueCountries);
 
-    // ✅ GOLES EN TIEMPO REAL
+    // ⚽ GOLES
     const { data: goals } = await supabase
       .from("player_goals")
       .select("*")
@@ -84,7 +85,7 @@ export default function GoleadoresPage() {
 
     setGoalsMap(gMap);
 
-    // ✅ CARGAR SELECCIONES
+    // 📥 CARGAR SELECCIÓN
     const { data: existing } = await supabase
       .from("player_predictions")
       .select("*")
@@ -97,9 +98,11 @@ export default function GoleadoresPage() {
       { country: "", player_id: "" },
     ];
 
-    if (existing && existing.length > 0) {
+    if (existing?.length) {
       const filled = existing.map((e) => {
-        const player = uniquePlayers.find((pl) => pl.id === e.player_id);
+        const player = uniquePlayers.find(
+          (pl) => pl.id === e.player_id
+        );
 
         return {
           country: player?.team || "",
@@ -123,12 +126,7 @@ export default function GoleadoresPage() {
 
   async function save() {
     if (locked) {
-      alert("❌ Ya ha comenzado la ronda, no puedes modificar");
-      return;
-    }
-
-    if (!user || !round) {
-      alert("Error");
+      alert("❌ Ronda comenzada");
       return;
     }
 
@@ -188,7 +186,7 @@ export default function GoleadoresPage() {
 
         {locked && (
           <div className="text-red-400 text-[11px] mt-1">
-            🔒 Ronda comenzada - selección bloqueada
+            🔒 Ronda comenzada
           </div>
         )}
       </div>
@@ -201,7 +199,6 @@ export default function GoleadoresPage() {
           return (
             <div key={i} className="bg-gray-900 p-3 rounded">
 
-              {/* PAIS */}
               <select
                 disabled={locked}
                 className="w-full bg-gray-800 p-2 mb-2 text-xs"
@@ -219,7 +216,6 @@ export default function GoleadoresPage() {
                 ))}
               </select>
 
-              {/* JUGADOR */}
               <select
                 disabled={locked}
                 className="w-full bg-gray-800 p-2 text-xs"
@@ -245,7 +241,6 @@ export default function GoleadoresPage() {
                 ))}
               </select>
 
-              {/* GOLES */}
               {s.player_id && (
                 <div className="text-right text-[11px] text-green-400 mt-1">
                   ⚽ {playerGoals} goles
