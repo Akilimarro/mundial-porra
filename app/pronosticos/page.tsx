@@ -97,26 +97,18 @@ export default function PronosticosPage() {
     loadData(u.id)
   }, [])
 
+  // 🔥 SOLO RONDA ACTIVA
   const loadData = async (userId: number) => {
-    const now = new Date()
-
     const { data: matchesData } = await supabase
       .from("matches")
-      .select("*")
+      .select("*, rounds(active)")
+      .eq("rounds.active", true)
       .order("match_date")
 
     if (!matchesData) return
 
-    const next = matchesData.find((m) => new Date(m.match_date) > now)
-    if (!next) return
+    setMatches(matchesData)
 
-    const roundMatches = matchesData.filter(
-      (m) => m.round_id === next.round_id
-    )
-
-    setMatches(roundMatches)
-
-    // cargar predicciones existentes
     const { data: preds } = await supabase
       .from("predictions")
       .select("*")
@@ -124,7 +116,7 @@ export default function PronosticosPage() {
 
     const map: PredictionsMap = {}
 
-    roundMatches.forEach((m) => {
+    matchesData.forEach((m) => {
       const existing = preds?.find((p) => p.match_id === m.id)
 
       map[m.id] = {
@@ -137,18 +129,19 @@ export default function PronosticosPage() {
     setPredictions(map)
   }
 
-  const update = (
-    id: number,
-    field: keyof Prediction,
-    value: string
-  ) => {
+  // 🔒 BLOQUEO 30 MIN
+  const isLocked = (date: string) => {
+    const matchTime = new Date(date).getTime()
+    const now = new Date().getTime()
+
+    return matchTime - now <= 30 * 60 * 1000
+  }
+
+  const update = (id: number, field: keyof Prediction, value: string) => {
     if (value === "") {
       setPredictions((prev) => ({
         ...prev,
-        [id]: {
-          ...prev[id],
-          [field]: null
-        }
+        [id]: { ...prev[id], [field]: null }
       }))
       return
     }
@@ -158,21 +151,19 @@ export default function PronosticosPage() {
 
     setPredictions((prev) => ({
       ...prev,
-      [id]: {
-        ...prev[id],
-        [field]: num
-      }
+      [id]: { ...prev[id], [field]: num }
     }))
   }
 
   const save = async () => {
     if (!user) return
 
-    for (const p of Object.values(predictions)) {
-      if (
-        p.predicted_home === null ||
-        p.predicted_away === null
-      )
+    for (const m of matches) {
+      if (isLocked(m.match_date)) continue
+
+      const p = predictions[m.id]
+
+      if (!p || p.predicted_home === null || p.predicted_away === null)
         continue
 
       await supabase.from("predictions").upsert({
@@ -226,9 +217,16 @@ export default function PronosticosPage() {
       <div style={styles.container}>
         {matches.map((m) => {
           const p = predictions[m.id]
+          const locked = isLocked(m.match_date)
 
           return (
-            <div key={m.id} style={styles.card}>
+            <div
+              key={m.id}
+              style={{
+                ...styles.card,
+                opacity: locked ? 0.5 : 1
+              }}
+            >
               <div style={styles.date}>{formatDate(m.match_date)}</div>
 
               <div style={styles.match}>
@@ -241,6 +239,7 @@ export default function PronosticosPage() {
                   <input
                     type="number"
                     min="0"
+                    disabled={locked}
                     value={p?.predicted_home ?? ""}
                     placeholder="-"
                     style={styles.input}
@@ -254,6 +253,7 @@ export default function PronosticosPage() {
                   <input
                     type="number"
                     min="0"
+                    disabled={locked}
                     value={p?.predicted_away ?? ""}
                     placeholder="-"
                     style={styles.input}
@@ -283,10 +283,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: "white",
     padding: 16
   },
-  header: {
-    textAlign: "center",
-    marginBottom: 20
-  },
+  header: { textAlign: "center", marginBottom: 20 },
   topButtons: {
     display: "flex",
     justifyContent: "center",
@@ -296,16 +293,16 @@ const styles: Record<string, React.CSSProperties> = {
   back: {
     padding: "6px 12px",
     background: "#444",
-    border: "none",
     borderRadius: 6,
-    color: "white"
+    color: "white",
+    border: "none"
   },
   save: {
     padding: "6px 12px",
     background: "#1f6feb",
-    border: "none",
     borderRadius: 6,
-    color: "white"
+    color: "white",
+    border: "none"
   },
   container: {
     maxWidth: 700,
@@ -319,32 +316,20 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 12,
     borderRadius: 10
   },
-  date: {
-    fontSize: 12,
-    opacity: 0.6,
-    marginBottom: 8
-  },
+  date: { fontSize: 12, opacity: 0.6, marginBottom: 8 },
   match: {
     display: "grid",
     gridTemplateColumns: "1fr 120px 1fr",
     alignItems: "center"
   },
-  team: {
-    display: "flex",
-    gap: 8,
-    alignItems: "center"
-  },
+  team: { display: "flex", gap: 8, alignItems: "center" },
   teamRight: {
     display: "flex",
     gap: 8,
     justifyContent: "flex-end",
     alignItems: "center"
   },
-  center: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center"
-  },
+  center: { display: "flex", justifyContent: "center" },
   input: {
     width: 40,
     textAlign: "center",
