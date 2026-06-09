@@ -63,11 +63,19 @@ export default function RankingPage() {
       .sort((a, b) => b.total_points - a.total_points)
 
     let pos = 1
+
     const withPos = sorted.map((r, i) => {
-      if (i > 0 && r.total_points < sorted[i - 1].total_points) {
-        pos = i + 1
+      if (i === 0) {
+        return { ...r, position: 1 }
       }
-      return { ...r, position: pos }
+
+      // Tie handling: if same points as previous user, share position
+      if (r.total_points === sorted[i - 1].total_points) {
+        return { ...r, position: withPos[i - 1].position }
+      }
+
+      // Otherwise, position is index + 1 (standard ranking)
+      return { ...r, position: i + 1 }
     })
 
     setRows(withPos)
