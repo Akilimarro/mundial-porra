@@ -70,7 +70,7 @@ const countryFlags: Record<string, string> = {
   uzbekistan: "uz",
 };
 
-// 🔥 NORMALIZADOR ROBUSTO (CLAVE DEL FIX)
+// 🔥 NORMALIZADOR
 function normalize(team: string) {
   return team
     .toLowerCase()
@@ -113,24 +113,39 @@ export default function PronosticosPage() {
 
     setUser(parsed);
 
-    const { data: r } = await supabase
+    // 🔥 1. obtener ronda activa
+    const { data: activeRound } = await supabase
       .from("rounds")
       .select("*")
       .eq("active", true)
       .single();
 
-    setRound(r);
-    if (!r) return;
+    if (!activeRound) return;
 
+    // 🔥 2. buscar siguiente ronda
+    const { data: nextRound } = await supabase
+      .from("rounds")
+      .select("*")
+      .gt("id", activeRound.id)
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    // 🔥 3. decidir qué ronda usar
+    const selectedRound = nextRound || activeRound;
+
+    setRound(selectedRound);
+
+    // 🔥 4. cargar partidos de ESA ronda
     const { data: m } = await supabase
       .from("matches")
       .select("*")
-      .eq("round_id", r.id)
+      .eq("round_id", selectedRound.id)
       .order("match_date", { ascending: true });
 
     setMatches(m ?? []);
 
-    // 🔒 BLOQUEO POR PRIMER PARTIDO (FIX COMPLETO)
+    // 🔒 BLOQUEO sobre la ronda mostrada
     if (m && m.length > 0) {
       const firstMatchDate = new Date(m[0].match_date).getTime();
       if (Date.now() >= firstMatchDate) {
@@ -138,6 +153,7 @@ export default function PronosticosPage() {
       }
     }
 
+    // 🔥 predicciones (siguen siendo del usuario global)
     const { data: p } = await supabase
       .from("predictions")
       .select("*")

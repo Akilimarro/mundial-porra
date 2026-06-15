@@ -51,30 +51,9 @@ export default function InstruccionesPage() {
           <h2 className="font-semibold mb-2">🎯 Puntuación partidos</h2>
 
           <ul className="space-y-1 text-gray-300">
-            <li>• Resultado exacto → máxima puntuación</li>
-            <li>• Acierto de ganador/empate → puntuación parcial</li>
+            <li>• Resultado exacto → máxima puntuación (2)</li>
+            <li>• Acierto de ganador/empate → puntuación parcial (1)</li>
             <li>• Fallo → 0 puntos</li>
-          </ul>
-        </div>
-
-        {/* GOLEADORES */}
-        <div className="bg-gray-900 p-3 rounded">
-          <h2 className="font-semibold mb-2">🔥 Pronóstico de goleadores</h2>
-
-          <ul className="space-y-1 text-gray-300">
-            <li>• Elige 3 jugadores por ronda</li>
-            <li>• Solo puedes hacerlo antes del primer partido</li>
-            <li>• No puedes repetir jugador</li>
-          </ul>
-        </div>
-
-        {/* PUNTOS GOLES */}
-        <div className="bg-gray-900 p-3 rounded">
-          <h2 className="font-semibold mb-2">⚽ Puntos goleadores</h2>
-
-          <ul className="space-y-1 text-gray-300">
-            <li>• Cada gol del jugador → 1 punto</li>
-            <li>• Se suman automáticamente al ranking</li>
           </ul>
         </div>
 
@@ -84,7 +63,7 @@ export default function InstruccionesPage() {
 
           <ul className="space-y-1 text-gray-300">
             <li>• Solo participan usuarios activos</li>
-            <li>• Se suman puntos de partidos + goleadores</li>
+            <li>• Se suman puntos de partidos</li>
             <li>• Empates comparten posición</li>
           </ul>
         </div>
@@ -96,7 +75,6 @@ export default function InstruccionesPage() {
           <ul className="space-y-1 text-gray-300">
             <li>• No olvides guardar tus pronósticos</li>
             <li>• Revisa fechas de partidos</li>
-            <li>• Elige goleadores que jueguen seguro</li>
           </ul>
         </div>
 
