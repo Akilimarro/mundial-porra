@@ -151,6 +151,12 @@ export default function Home() {
     }
   }
 
+  function logout() {
+    localStorage.removeItem("user");
+    setUser(null);
+    window.location.reload();
+  }
+
   function renderPrediction(matchId: number) {
     const p = predictions[matchId];
     return p
@@ -167,13 +173,20 @@ export default function Home() {
         <div className="flex justify-between text-xs mb-2">
           <div>{user ? `👤 ${user.username}` : "No logueado"}</div>
 
-          {!user && (
+          {!user ? (
             <Link
               href="/login"
               className="bg-gray-700 px-2 py-1 rounded"
             >
               Login
             </Link>
+          ) : (
+            <button
+              onClick={logout}
+              className="bg-red-700 px-2 py-1 rounded"
+            >
+              Logout
+            </button>
           )}
         </div>
 
@@ -186,14 +199,6 @@ export default function Home() {
 
             <Link href="/ranking" className="bg-gray-700 px-2 py-1 rounded">
               Ranking
-            </Link>
-
-            <Link href="/goleadores" className="bg-gray-700 px-2 py-1 rounded">
-              Pronóstico goleadores
-            </Link>
-
-            <Link href="/ranking-goleadores" className="bg-gray-700 px-2 py-1 rounded">
-              Ranking goleadores
             </Link>
 
             <Link href="/instrucciones" className="bg-gray-700 px-2 py-1 rounded">
